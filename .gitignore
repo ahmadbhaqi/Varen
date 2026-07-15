@@ -1,0 +1,54 @@
+# Gradle and Kotlin caches
+.gradle/
+.kotlin/
+**/build/
+
+# Android Studio and local SDK configuration
+.idea/
+*.iml
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Generated Android artifacts
+*.apk
+*.aab
+*.apks
+*.dex
+mapping.txt
+
+# Signing material and credentials
+*.jks
+*.keystore
+keystore.properties
+google-services.json
+.env
+.env.*
+!.env.example
+
+# Logs and temporary diagnostics
+*.log
+*.tmp
+*.bak
+*.swp
+.DS_Store
+Thumbs.db
+
+# Local agent/research artifacts
+.superpowers/
+graphify-out/
+docs/superpowers/
+needmcp_tools.json
+prompt.txt
+MIGRATION_GUIDE.md
+MODERN_UI_SUMMARY.md
+bo.txt
+compile*.log
+assemble*.log
+/.gradlew.bat assembleDebug.txt
+
+# Non-Android scratch tooling
+node_modules/
+package-lock.json
+discomp.cjs
