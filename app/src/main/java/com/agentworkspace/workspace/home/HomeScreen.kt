@@ -1,5 +1,8 @@
 package com.agentworkspace.workspace.home
 
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -33,7 +36,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Icon
@@ -49,6 +54,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -79,6 +85,10 @@ import com.agentworkspace.shell.presentation.homePendingPromptAction
 import com.agentworkspace.shell.presentation.homeWorkspaceContextSummary
 import com.agentworkspace.shell.presentation.isLiveAgentStatus
 import com.agentworkspace.shell.theme.AppTheme
+import com.agentworkspace.readiness.domain.ReadinessAction
+import com.agentworkspace.readiness.domain.RuntimeReadiness
+import com.agentworkspace.readiness.presentation.ReadinessCardModel
+import com.agentworkspace.readiness.presentation.ReadinessCardTone
 
 @Composable
 fun HomeScreen(
@@ -86,6 +96,7 @@ fun HomeScreen(
     onNewProject: () -> Unit,
     onTaskClick: (projectId: String, taskId: String) -> Unit,
     onConfigureModels: () -> Unit,
+    onReadinessAction: (ReadinessAction, projectId: String?) -> Unit,
     onOpenDrawer: () -> Unit,
     onProjectMenuClick: (hasProject: Boolean) -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
@@ -111,19 +122,51 @@ fun HomeScreen(
     var composer by rememberSaveable { mutableStateOf("") }
     var unscopedPrompt by rememberSaveable { mutableStateOf<String?>(null) }
     var hasSentFirstPrompt by rememberSaveable { mutableStateOf(false) }
+    var reconnectProjectId by rememberSaveable { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+    val reconnectLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree(),
+    ) { uri ->
+        val projectId = reconnectProjectId
+        reconnectProjectId = null
+        if (uri != null && projectId != null) {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                )
+            }.onSuccess {
+                viewModel.reconnectWorkspace(projectId, uri.toString())
+            }
+        }
+    }
     val pendingPromptAction = homePendingPromptAction(actionProjectId, unscopedPrompt)
     val conversationMode = homeConversationMode(
         savedPrompt = if (hasSentFirstPrompt) unscopedPrompt ?: "submitted" else null,
         activeTask = activeTask,
     )
 
+    fun handleReadinessAction(action: ReadinessAction, projectId: String?) {
+        if (action == ReadinessAction.RECONNECT_WORKSPACE && projectId != null) {
+            reconnectProjectId = projectId
+            reconnectLauncher.launch(null)
+        } else {
+            onReadinessAction(action, projectId)
+        }
+    }
+
     fun startProjectTask(projectId: String, prompt: String) {
         hasSentFirstPrompt = true
         composer = ""
-        viewModel.createAndStartTask(projectId, prompt) { taskId ->
-            unscopedPrompt = null
-            onTaskClick(projectId, taskId)
-        }
+        viewModel.createAndStartTask(
+            projectId = projectId,
+            goal = prompt,
+            onBlocked = { blocker -> handleReadinessAction(blocker.action, projectId) },
+            onCreated = { taskId ->
+                unscopedPrompt = null
+                onTaskClick(projectId, taskId)
+            },
+        )
     }
 
     fun submitHomeMessage() {
@@ -158,7 +201,8 @@ fun HomeScreen(
                 title = activeProject?.name ?: "Workspace",
                 subtitle = when {
                     activeTask != null -> activeTask.status.displayName
-                    actionProjectId != null -> "Ready to build"
+                    uiState.runtimeReadiness is RuntimeReadiness.Ready -> "Ready to build"
+                    uiState.runtimeReadiness is RuntimeReadiness.Blocked -> "Setup needed"
                     else -> "AI workspace"
                 },
                 leading = {
@@ -184,12 +228,23 @@ fun HomeScreen(
                 meta = contextSummary.metaLine.replace(" - ", " · "),
                 status = when {
                     agentRunning -> "Working"
-                    uiState.connectionStatus == "Connected" -> "Ready"
+                    uiState.runtimeReadiness is RuntimeReadiness.Ready -> "Ready"
+                    uiState.runtimeReadiness is RuntimeReadiness.Blocked -> "Setup"
                     else -> "Offline"
                 },
                 onClick = { actionProjectId?.let(onProjectClick) ?: onNewProject() },
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
             )
+
+            uiState.readinessCard?.let { card ->
+                RuntimeReadinessCard(
+                    model = card,
+                    onAction = card.action?.let { action ->
+                        { handleReadinessAction(action, actionProjectId) }
+                    },
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                )
+            }
 
             ConversationTimeline(
                 conversationMode = conversationMode,
@@ -231,6 +286,70 @@ fun HomeScreen(
                 )
             }
             Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+@Composable
+private fun RuntimeReadinessCard(
+    model: ReadinessCardModel,
+    onAction: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
+    val signalColor = when (model.tone) {
+        ReadinessCardTone.READY -> AppTheme.colors.success
+        ReadinessCardTone.LIMITED -> AppTheme.colors.warning
+        ReadinessCardTone.ACTION_REQUIRED -> AppTheme.colors.warning
+    }
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .then(if (onAction != null) Modifier.clickable(onClick = onAction) else Modifier),
+        shape = RoundedCornerShape(14.dp),
+        color = AppTheme.colors.elevated,
+        border = BorderStroke(1.dp, signalColor.copy(alpha = 0.32f)),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = if (model.tone == ReadinessCardTone.READY) {
+                    Icons.Filled.CheckCircle
+                } else {
+                    Icons.Filled.Info
+                },
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = signalColor,
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = model.title,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = AppTheme.colors.textPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = model.detail,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = AppTheme.colors.textSecondary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            model.actionLabel?.let { label ->
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = signalColor,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
         }
     }
 }

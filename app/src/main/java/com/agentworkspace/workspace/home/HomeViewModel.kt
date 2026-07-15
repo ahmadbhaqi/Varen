@@ -11,6 +11,11 @@ import com.agentworkspace.data.repository.ConnectionRepository
 import com.agentworkspace.data.repository.ProjectRepository
 import com.agentworkspace.data.repository.TaskRepository
 import com.agentworkspace.data.repository.UsageRepository
+import com.agentworkspace.readiness.application.RuntimeReadinessCoordinator
+import com.agentworkspace.readiness.domain.ReadinessBlocker
+import com.agentworkspace.readiness.domain.RuntimeReadiness
+import com.agentworkspace.readiness.presentation.ReadinessCardModel
+import com.agentworkspace.readiness.presentation.runtimeReadinessCard
 import com.agentworkspace.shell.presentation.homeActiveProject
 import com.agentworkspace.shell.presentation.homeContextModelName
 import com.agentworkspace.shell.presentation.homeContextTrustMode
@@ -33,6 +38,8 @@ data class HomeUiState(
     val sessionTokens: Int = 0,
     val modelOptions: List<HomeModelOption> = emptyList(),
     val selectedModelId: String? = null,
+    val runtimeReadiness: RuntimeReadiness? = null,
+    val readinessCard: ReadinessCardModel? = null,
     val isLoading: Boolean = true,
 )
 
@@ -43,14 +50,28 @@ class HomeViewModel @Inject constructor(
     private val taskRepository: TaskRepository,
     private val usageRepository: UsageRepository,
     private val connectionRepository: ConnectionRepository,
+    private val readinessCoordinator: RuntimeReadinessCoordinator,
 ) : ViewModel() {
 
-    fun createAndStartTask(projectId: String, goal: String, onCreated: (String) -> Unit) {
+    fun createAndStartTask(
+        projectId: String,
+        goal: String,
+        onBlocked: (ReadinessBlocker) -> Unit,
+        onCreated: (String) -> Unit,
+    ) {
         viewModelScope.launch {
             val project = projectRepository.getProjectById(projectId).first()
-            val selectedModel = project?.preferredModelId?.let { connectionRepository.getModelById(it) }
+            val connections = connectionRepository.getAllConnections().first()
+            val readiness = readinessCoordinator.evaluate(project, connections)
+            if (readiness is RuntimeReadiness.Blocked) {
+                onBlocked(readiness.blocker)
+                return@launch
+            }
+            val selectedModel = project?.preferredModelId?.let { modelId ->
+                connections.flatMap { it.models }.firstOrNull { it.id == modelId }
+            }
             val modelId = selectedModel?.name
-            val connectionId = selectedModel?.connectionId
+            val connectionId = project?.preferredConnectionId
 
             val task = taskRepository.createTask(
                 projectId = projectId,
@@ -69,6 +90,13 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             projectRepository.updatePreferredModel(projectId, option.id)
             projectRepository.updatePreferredConnection(projectId, option.connectionId)
+        }
+    }
+
+    fun reconnectWorkspace(projectId: String, workspacePath: String) {
+        viewModelScope.launch {
+            val project = projectRepository.getProjectById(projectId).first() ?: return@launch
+            projectRepository.updateProject(project.copy(path = workspacePath))
         }
     }
 
@@ -149,6 +177,7 @@ class HomeViewModel @Inject constructor(
                 )
 
                 val sessionTokens = (usage?.totalInputTokens ?: 0) + (usage?.totalOutputTokens ?: 0)
+                val runtimeReadiness = readinessCoordinator.evaluate(displayProject, connections)
 
                 HomeUiState(
                     recentProjects = projects,
@@ -160,6 +189,8 @@ class HomeViewModel @Inject constructor(
                     sessionTokens = sessionTokens,
                     modelOptions = modelOptions,
                     selectedModelId = selectedModelId,
+                    runtimeReadiness = runtimeReadiness,
+                    readinessCard = runtimeReadinessCard(runtimeReadiness),
                     isLoading = false,
                 )
             }.collect { state -> _uiState.value = state }

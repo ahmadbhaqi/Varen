@@ -18,6 +18,8 @@ import com.agentworkspace.runtime.domain.RunEventKind
 import com.agentworkspace.runtime.domain.RunStateMachine
 import com.agentworkspace.runtime.domain.RunRecoveryPolicy
 import com.agentworkspace.runtime.domain.RunStatus
+import com.agentworkspace.readiness.domain.WorkspaceCapabilityProfiles
+import com.agentworkspace.readiness.domain.WorkspaceKind
 import com.agentworkspace.runtime.domain.RuntimeClock
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -163,6 +165,9 @@ class AgentRunRepositoryTest {
             workspaceId = "content://demo",
             trustMode = TrustMode.MANUAL,
             transport = "GEMINI_NATIVE",
+            workspaceKind = WorkspaceKind.LOCAL_SAF,
+            capabilities = WorkspaceCapabilityProfiles.forKind(WorkspaceKind.LOCAL_SAF).capabilities,
+            limitations = listOf("COMMAND_EXECUTION_UNAVAILABLE"),
         ),
     )
 }

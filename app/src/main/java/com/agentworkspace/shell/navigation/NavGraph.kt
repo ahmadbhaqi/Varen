@@ -10,6 +10,7 @@ import com.agentworkspace.settings.connections.ConnectionStatusScreen
 import com.agentworkspace.settings.connections.ConnectionsScreen
 import com.agentworkspace.mcp.presentation.McpScreen
 import com.agentworkspace.workspace.home.HomeScreen
+import com.agentworkspace.readiness.domain.ReadinessAction
 
 @Composable
 fun NavGraph(
@@ -34,6 +35,21 @@ fun NavGraph(
                 },
                 onConfigureModels = {
                     navController.navigate("Connections")
+                },
+                onReadinessAction = { action, projectId ->
+                    val destination = when (action) {
+                        ReadinessAction.CREATE_PROJECT -> "project/new"
+                        ReadinessAction.OPEN_CONNECTIONS,
+                        ReadinessAction.REAUTHENTICATE,
+                        -> "Connections"
+                        ReadinessAction.SELECT_MODEL -> projectId
+                            ?.let { "project/$it/models" }
+                            ?: "model_catalog"
+                        ReadinessAction.RECONNECT_WORKSPACE -> projectId
+                            ?.let { "project/$it" }
+                            ?: "project/new"
+                    }
+                    navController.navigate(destination)
                 },
                 onOpenDrawer = onOpenDrawer,
                 onProjectMenuClick = onOpenProjectMenu,
