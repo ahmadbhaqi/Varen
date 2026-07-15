@@ -5,6 +5,8 @@ import com.agentworkspace.data.model.HistoryType
 import com.agentworkspace.data.repository.HistoryRepository
 import com.agentworkspace.model.api.ToolDefinition
 import com.agentworkspace.model.api.ToolFunction
+import com.agentworkspace.readiness.domain.ToolCapabilityPolicy
+import com.agentworkspace.readiness.domain.WorkspaceCapability
 import com.agentworkspace.trust.policy.AgentAction
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -34,14 +36,14 @@ class GitHubToolRegistry @Inject constructor(
         else -> AgentAction.ReadFile(toolName)
     }
 
-    fun schemas(): List<ToolDefinition> = listOf(
+    fun schemas(capabilities: Set<WorkspaceCapability>): List<ToolDefinition> = listOf(
         tool("read_file", "Read a text file from the GitHub repository branch.", obj("path" to "string")),
         tool("list_files", "List files and folders in the GitHub repository. Use recursive=true only when needed.", obj("path" to "string", "recursive" to "boolean")),
         tool("search_files", "Search GitHub repository text files for a literal or regex pattern.", obj("path" to "string", "query" to "string", "is_regex" to "boolean")),
         tool("write_file", "Create or overwrite a file in the GitHub repository branch.", obj("path" to "string", "content" to "string", "overwrite" to "boolean")),
         tool("edit_file", "Edit a file in the GitHub repository branch by replacing old_text with new_text.", obj("path" to "string", "old_text" to "string", "new_text" to "string")),
         tool("delete_file", "Delete a single file from the GitHub repository branch.", obj("path" to "string")),
-    )
+    ).filter { ToolCapabilityPolicy.supports(it.function.name, capabilities) }
 
     suspend fun execute(
         toolName: String,

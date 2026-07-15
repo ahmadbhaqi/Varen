@@ -113,6 +113,7 @@ class AndroidLegacyRuntimeGateway @Inject constructor(
             treeUri = Uri.parse(request.configuration.workspaceId),
             workingDir = request.configuration.workspaceId,
             trustMode = request.configuration.trustMode,
+            capabilities = request.configuration.capabilities,
             approve = approve,
         )
         LegacyRuntimeKind.GITHUB -> githubRuntime.executeTask(
@@ -121,6 +122,7 @@ class AndroidLegacyRuntimeGateway @Inject constructor(
             modelId = request.configuration.providerModelId,
             project = parseGitHubProjectPath(request.configuration.workspaceId),
             trustMode = request.configuration.trustMode,
+            capabilities = request.configuration.capabilities,
             approve = approve,
         )
     }

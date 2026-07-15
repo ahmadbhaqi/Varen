@@ -8,6 +8,8 @@ import com.agentworkspace.data.model.HistoryType
 import com.agentworkspace.data.repository.HistoryRepository
 import com.agentworkspace.model.api.ToolDefinition
 import com.agentworkspace.model.api.ToolFunction
+import com.agentworkspace.readiness.domain.ToolCapabilityPolicy
+import com.agentworkspace.readiness.domain.WorkspaceCapability
 import com.agentworkspace.trust.policy.AgentAction
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -47,7 +49,7 @@ class ToolRegistry @Inject constructor(
     }
 
     /** All tool schemas, ready to attach to a chat completion request. */
-    fun schemas(): List<ToolDefinition> = listOf(
+    fun schemas(capabilities: Set<WorkspaceCapability>): List<ToolDefinition> = listOf(
         tool("read_file", "Read the text content of a file. Returns content + size.", obj("path" to "string")),
         tool("list_files", "List files and folders in a directory. Set recursive=true to walk the tree.", obj("path" to "string", "recursive" to "boolean")),
         tool("search_files", "Search file contents for a literal or regex pattern. Returns path:line:snippet.", obj("path" to "string", "query" to "string", "is_regex" to "boolean")),
@@ -55,7 +57,7 @@ class ToolRegistry @Inject constructor(
         tool("edit_file", "Edit a file by replacing old_text with new_text. Fails if old_text is not found.", obj("path" to "string", "old_text" to "string", "new_text" to "string")),
         tool("delete_file", "Delete a single file. Directories are not supported.", obj("path" to "string")),
         tool("run_command", "Run a shell command in the workspace. Use for builds, tests, git.", obj("command" to "string", "cwd" to "string")),
-    )
+    ).filter { ToolCapabilityPolicy.supports(it.function.name, capabilities) }
 
     /** Execute a tool call. Returns a JSON string the model can read. */
     suspend fun execute(

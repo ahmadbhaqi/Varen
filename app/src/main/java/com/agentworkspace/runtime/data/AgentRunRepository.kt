@@ -9,6 +9,9 @@ import com.agentworkspace.data.db.entity.runtime.RunCommandEntity
 import com.agentworkspace.data.db.entity.runtime.RunEventEntity
 import com.agentworkspace.data.db.entity.runtime.RunMessageEntity
 import com.agentworkspace.data.model.TrustMode
+import com.agentworkspace.readiness.domain.WorkspaceCapability
+import com.agentworkspace.readiness.domain.WorkspaceCapabilityProfiles
+import com.agentworkspace.readiness.domain.WorkspaceKind
 import com.agentworkspace.runtime.domain.ApprovalStatus
 import com.agentworkspace.runtime.domain.IdGenerator
 import com.agentworkspace.runtime.domain.RunCommandKind
@@ -22,6 +25,8 @@ import com.agentworkspace.runtime.domain.RuntimeClock
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
@@ -460,18 +465,51 @@ object RunConfigurationCodec {
         put("trustMode", configuration.trustMode.name)
         put("transport", configuration.transport)
         put("systemPromptVersion", configuration.systemPromptVersion)
+        put(
+            "workspaceKind",
+            configuration.workspaceKind.name,
+        )
+        put(
+            "capabilities",
+            JsonArray(configuration.capabilities.sortedBy { it.name }.map { JsonPrimitive(it.name) }),
+        )
+        put(
+            "limitations",
+            JsonArray(configuration.limitations.map(::JsonPrimitive)),
+        )
     }.toString()
 
     fun decode(raw: String): RunConfiguration {
         val value = json.parseToJsonElement(raw) as JsonObject
+        val workspaceId = value.requiredString("workspaceId")
+        val workspaceKind = value["workspaceKind"]?.jsonPrimitive?.contentOrNull
+            ?.let { rawKind -> runCatching { WorkspaceKind.valueOf(rawKind) }.getOrNull() }
+            ?: if (workspaceId.startsWith("github://")) WorkspaceKind.GITHUB else WorkspaceKind.LOCAL_SAF
+        val safeDefaults = WorkspaceCapabilityProfiles.forKind(workspaceKind)
+        val capabilities = (value["capabilities"] as? JsonArray)?.mapNotNull { item ->
+            item.jsonPrimitive.contentOrNull
+                ?.let { rawCapability ->
+                    runCatching { WorkspaceCapability.valueOf(rawCapability) }.getOrNull()
+                }
+        }?.toSet() ?: safeDefaults.capabilities
+        val limitations = (value["limitations"] as? JsonArray)?.mapNotNull {
+            it.jsonPrimitive.contentOrNull
+        } ?: if (workspaceKind == WorkspaceKind.LOCAL_SAF) {
+            listOf("COMMAND_EXECUTION_UNAVAILABLE")
+        } else {
+            emptyList()
+        }
         return RunConfiguration(
             connectionId = value.requiredString("connectionId"),
             providerModelId = value.requiredString("providerModelId"),
-            workspaceId = value.requiredString("workspaceId"),
+            workspaceId = workspaceId,
             trustMode = TrustMode.valueOf(value.requiredString("trustMode")),
             transport = value.requiredString("transport"),
             systemPromptVersion = value["systemPromptVersion"]?.jsonPrimitive?.contentOrNull
                 ?: "agent-workspace-v1",
+            workspaceKind = workspaceKind,
+            capabilities = capabilities,
+            limitations = limitations,
         )
     }
 

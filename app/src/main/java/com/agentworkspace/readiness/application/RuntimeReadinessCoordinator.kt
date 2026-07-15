@@ -10,40 +10,20 @@ import com.agentworkspace.readiness.domain.ReadinessBlocker
 import com.agentworkspace.readiness.domain.RuntimeLimitation
 import com.agentworkspace.readiness.domain.RuntimeReadiness
 import com.agentworkspace.readiness.domain.WorkspaceAccessChecker
-import com.agentworkspace.readiness.domain.WorkspaceCapability
 import com.agentworkspace.readiness.domain.WorkspaceCapabilityProfile
+import com.agentworkspace.readiness.domain.WorkspaceCapabilityProfiles
 import com.agentworkspace.readiness.domain.WorkspaceKind
 import javax.inject.Inject
 import javax.inject.Singleton
 
 class WorkspaceCapabilityResolver @Inject constructor() {
     fun resolve(project: Project): WorkspaceCapabilityProfile = when {
-        isGitHubProjectPath(project.path) -> WorkspaceCapabilityProfile(
-            kind = WorkspaceKind.GITHUB,
-            capabilities = GITHUB_CAPABILITIES,
-        )
+        isGitHubProjectPath(project.path) -> WorkspaceCapabilityProfiles.forKind(WorkspaceKind.GITHUB)
 
-        project.path.startsWith("content://", ignoreCase = true) -> WorkspaceCapabilityProfile(
-            kind = WorkspaceKind.LOCAL_SAF,
-            capabilities = LOCAL_SAF_CAPABILITIES,
-        )
+        project.path.startsWith("content://", ignoreCase = true) ->
+            WorkspaceCapabilityProfiles.forKind(WorkspaceKind.LOCAL_SAF)
 
         else -> error("Unsupported workspace path: ${project.path}")
-    }
-
-    private companion object {
-        val FILE_CAPABILITIES = setOf(
-            WorkspaceCapability.LIST_FILES,
-            WorkspaceCapability.READ_FILES,
-            WorkspaceCapability.SEARCH_FILES,
-            WorkspaceCapability.WRITE_FILES,
-            WorkspaceCapability.DELETE_FILES,
-        )
-        val LOCAL_SAF_CAPABILITIES = FILE_CAPABILITIES + setOf(
-            WorkspaceCapability.CHECKPOINTS,
-            WorkspaceCapability.DIFFS,
-        )
-        val GITHUB_CAPABILITIES = FILE_CAPABILITIES + WorkspaceCapability.REMOTE_VERIFICATION
     }
 }
 

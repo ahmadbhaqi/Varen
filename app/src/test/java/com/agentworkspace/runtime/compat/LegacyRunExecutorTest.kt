@@ -13,6 +13,8 @@ import com.agentworkspace.runtime.application.ApprovalRequester
 import com.agentworkspace.runtime.domain.RunConfiguration
 import com.agentworkspace.runtime.domain.RunEventKind
 import com.agentworkspace.runtime.domain.RunStatus
+import com.agentworkspace.readiness.domain.WorkspaceCapabilityProfiles
+import com.agentworkspace.readiness.domain.WorkspaceKind
 import com.agentworkspace.trust.policy.AgentAction
 import com.agentworkspace.trust.policy.ApprovalDecision
 import kotlinx.coroutines.flow.Flow
@@ -77,6 +79,9 @@ class LegacyRunExecutorTest {
             workspaceId = workspaceId,
             trustMode = TrustMode.GUIDED,
             transport = "OPENAI_COMPATIBLE",
+            workspaceKind = WorkspaceKind.LOCAL_SAF,
+            capabilities = WorkspaceCapabilityProfiles.forKind(WorkspaceKind.LOCAL_SAF).capabilities,
+            limitations = listOf("COMMAND_EXECUTION_UNAVAILABLE"),
         )
         val context = LegacyExecutionContext(run, task, project, connection, configuration)
         val progress = RecordingProgressStore(run)

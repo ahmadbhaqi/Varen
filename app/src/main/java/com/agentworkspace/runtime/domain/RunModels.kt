@@ -1,6 +1,8 @@
 package com.agentworkspace.runtime.domain
 
 import com.agentworkspace.data.model.TrustMode
+import com.agentworkspace.readiness.domain.WorkspaceCapability
+import com.agentworkspace.readiness.domain.WorkspaceKind
 
 enum class RunStatus {
     QUEUED,
@@ -76,4 +78,7 @@ data class RunConfiguration(
     val trustMode: TrustMode,
     val transport: String,
     val systemPromptVersion: String = "agent-workspace-v1",
+    val workspaceKind: WorkspaceKind,
+    val capabilities: Set<WorkspaceCapability>,
+    val limitations: List<String> = emptyList(),
 )

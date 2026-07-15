@@ -12,6 +12,7 @@ import com.agentworkspace.data.model.TaskStatus
 import com.agentworkspace.data.repository.TaskRepository
 import com.agentworkspace.runtime.application.ResolveRunApproval
 import com.agentworkspace.runtime.application.StartAgentRun
+import com.agentworkspace.runtime.application.StartAgentRunResult
 import com.agentworkspace.runtime.data.AgentRunRepository
 import com.agentworkspace.runtime.service.RunLauncher
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -115,8 +116,14 @@ class TaskViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching {
                 startAgentRun.execute(projectId, taskId, goal, title)
-            }.onSuccess { runId ->
-                requestedRunId.value = runId
+            }.onSuccess { result ->
+                when (result) {
+                    is StartAgentRunResult.Started -> requestedRunId.value = result.runId
+                    is StartAgentRunResult.Blocked -> commandLine.value = ChatLine(
+                        ChatLine.Role.ERROR,
+                        result.blocker.message,
+                    )
+                }
             }.onFailure { error ->
                 commandLine.value = ChatLine(
                     ChatLine.Role.ERROR,

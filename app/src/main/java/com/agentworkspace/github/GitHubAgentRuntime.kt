@@ -15,6 +15,8 @@ import com.agentworkspace.data.repository.UsageRepository
 import com.agentworkspace.model.api.ChatCompletionRequest
 import com.agentworkspace.model.api.ChatMessage
 import com.agentworkspace.model.api.LlmApiClient
+import com.agentworkspace.readiness.domain.ToolCapabilityPolicy
+import com.agentworkspace.readiness.domain.WorkspaceCapability
 import com.agentworkspace.trust.policy.AgentAction
 import com.agentworkspace.trust.policy.ApprovalDecision
 import com.agentworkspace.trust.policy.TrustPolicy
@@ -54,6 +56,7 @@ class GitHubAgentRuntime @Inject constructor(
         modelId: String,
         project: GitHubRemoteProject,
         trustMode: TrustMode,
+        capabilities: Set<WorkspaceCapability>,
         approve: suspend (AgentAction, ApprovalDecision) -> Boolean,
     ): Result<Task> {
         var currentTask = task.copy(
@@ -80,7 +83,7 @@ class GitHubAgentRuntime @Inject constructor(
             ChatMessage(role = "system", content = buildSystemPrompt(project, workingBranch, trustMode)),
             ChatMessage(role = "user", content = task.goal),
         )
-        val tools = githubTools.schemas()
+        val tools = githubTools.schemas(capabilities)
 
         try {
             var iteration = 0
@@ -170,7 +173,13 @@ class GitHubAgentRuntime @Inject constructor(
                 )
 
                 if (calls.isEmpty()) {
-                    currentTask = buildAndComplete(currentTask, msgContent, project, workingBranch)
+                    currentTask = buildAndComplete(
+                        currentTask,
+                        msgContent,
+                        project,
+                        workingBranch,
+                        capabilities,
+                    )
                     return Result.success(currentTask)
                 }
 
@@ -181,6 +190,15 @@ class GitHubAgentRuntime @Inject constructor(
                 for (call in calls.take(MAX_TOOL_CALLS_PER_TURN)) {
                     val toolName = call.function.name
                     val argsRaw = call.function.arguments
+                    if (
+                        ToolCapabilityPolicy.isBuiltIn(toolName) &&
+                        !ToolCapabilityPolicy.supports(toolName, capabilities)
+                    ) {
+                        val unavailable = "{\"error\":\"Tool is unavailable for this workspace: $toolName\"}"
+                        _events.emit(AgentEvent.Error(currentTask.id, "Unavailable tool requested: $toolName"))
+                        messages.add(toolResultMessage(call.id, toolName, unavailable))
+                        continue
+                    }
                     val args = (runCatching { json.parseToJsonElement(argsRaw) }.getOrNull() as? JsonObject)
                         ?: JsonObject(emptyMap())
                     val action = githubTools.actionFor(toolName, args)
@@ -240,7 +258,20 @@ class GitHubAgentRuntime @Inject constructor(
         summary: String,
         project: GitHubRemoteProject,
         branch: String,
+        capabilities: Set<WorkspaceCapability>,
     ): Task {
+        if (WorkspaceCapability.REMOTE_VERIFICATION !in capabilities) {
+            val current = task.copy(
+                status = TaskStatus.COMPLETED,
+                outputSummary = listOf(summary, "Remote verification was unavailable for this run.")
+                    .filter(String::isNotBlank)
+                    .joinToString("\n"),
+            )
+            taskRepository.updateTask(current)
+            record(current, HistoryType.TASK_COMPLETED, "GitHub task completed without remote verification", success = true)
+            _events.emit(AgentEvent.TaskComplete(current.id))
+            return current
+        }
         var current = task.copy(status = TaskStatus.EXECUTING)
         taskRepository.updateTask(current)
         _events.emit(AgentEvent.Message(current.id, "Building APK with GitHub Actions..."))

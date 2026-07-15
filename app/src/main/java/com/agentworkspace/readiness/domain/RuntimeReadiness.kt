@@ -16,6 +16,50 @@ enum class WorkspaceCapability {
     DIFFS,
 }
 
+object WorkspaceCapabilityProfiles {
+    private val fileCapabilities = setOf(
+        WorkspaceCapability.LIST_FILES,
+        WorkspaceCapability.READ_FILES,
+        WorkspaceCapability.SEARCH_FILES,
+        WorkspaceCapability.WRITE_FILES,
+        WorkspaceCapability.DELETE_FILES,
+    )
+
+    fun forKind(kind: WorkspaceKind): WorkspaceCapabilityProfile = when (kind) {
+        WorkspaceKind.LOCAL_SAF -> WorkspaceCapabilityProfile(
+            kind = kind,
+            capabilities = fileCapabilities + setOf(
+                WorkspaceCapability.CHECKPOINTS,
+                WorkspaceCapability.DIFFS,
+            ),
+        )
+
+        WorkspaceKind.GITHUB -> WorkspaceCapabilityProfile(
+            kind = kind,
+            capabilities = fileCapabilities + WorkspaceCapability.REMOTE_VERIFICATION,
+        )
+    }
+}
+
+object ToolCapabilityPolicy {
+    private val requirements = mapOf(
+        "list_files" to WorkspaceCapability.LIST_FILES,
+        "read_file" to WorkspaceCapability.READ_FILES,
+        "search_files" to WorkspaceCapability.SEARCH_FILES,
+        "write_file" to WorkspaceCapability.WRITE_FILES,
+        "edit_file" to WorkspaceCapability.WRITE_FILES,
+        "delete_file" to WorkspaceCapability.DELETE_FILES,
+        "run_command" to WorkspaceCapability.RUN_COMMAND,
+    )
+
+    fun isBuiltIn(toolName: String): Boolean = toolName in requirements
+
+    fun supports(
+        toolName: String,
+        capabilities: Set<WorkspaceCapability>,
+    ): Boolean = requirements[toolName]?.let(capabilities::contains) == true
+}
+
 data class WorkspaceCapabilityProfile(
     val kind: WorkspaceKind,
     val capabilities: Set<WorkspaceCapability>,

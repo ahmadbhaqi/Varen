@@ -22,6 +22,8 @@ import com.agentworkspace.execution.ExecutionLayer
 import com.agentworkspace.model.api.ChatCompletionRequest
 import com.agentworkspace.model.api.ChatMessage
 import com.agentworkspace.model.api.LlmApiClient
+import com.agentworkspace.readiness.domain.ToolCapabilityPolicy
+import com.agentworkspace.readiness.domain.WorkspaceCapability
 import com.agentworkspace.trust.policy.AgentAction
 import com.agentworkspace.trust.policy.ApprovalDecision
 import com.agentworkspace.trust.policy.TrustPolicy
@@ -90,6 +92,7 @@ class AgentRuntime @Inject constructor(
         treeUri: Uri,
         workingDir: String,
         trustMode: TrustMode,
+        capabilities: Set<WorkspaceCapability>,
         approve: suspend (AgentAction, ApprovalDecision) -> Boolean,
     ): Result<Task> {
         var currentTask = task.copy(
@@ -104,7 +107,7 @@ class AgentRuntime @Inject constructor(
             ChatMessage(role = "system", content = buildSystemPrompt(trustMode)),
             ChatMessage(role = "user", content = task.goal),
         )
-        val tools = toolRegistry.schemas() + mcpToolProvider.schemas()
+        val tools = toolRegistry.schemas(capabilities) + mcpToolProvider.schemas()
         try {
             var iteration = 0
             while (iteration < MAX_ITERATIONS) {
@@ -209,6 +212,15 @@ class AgentRuntime @Inject constructor(
                 for (call in calls.take(MAX_TOOL_CALLS_PER_TURN)) {
                     val toolName = call.function.name
                     val argsRaw = call.function.arguments
+                    if (
+                        ToolCapabilityPolicy.isBuiltIn(toolName) &&
+                        !ToolCapabilityPolicy.supports(toolName, capabilities)
+                    ) {
+                        val unavailable = "{\"error\":\"Tool is unavailable for this workspace: $toolName\"}"
+                        _events.emit(AgentEvent.Error(currentTask.id, "Unavailable tool requested: $toolName"))
+                        messages.add(toolResultMessage(call.id, toolName, unavailable))
+                        continue
+                    }
                     val args: kotlinx.serialization.json.JsonObject =
                         (runCatching { json.parseToJsonElement(argsRaw) }.getOrNull() as? kotlinx.serialization.json.JsonObject)
                             ?: kotlinx.serialization.json.JsonObject(emptyMap())
