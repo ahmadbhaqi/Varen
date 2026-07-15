@@ -129,7 +129,7 @@ class GitHubRemoteRepository @Inject constructor(
             path = path,
             content = current.replace(oldText, newText),
             overwrite = true,
-            message = "AgentWorkspace edit $path",
+            message = "Varen edit $path",
         )
     }
 
@@ -137,7 +137,7 @@ class GitHubRemoteRepository @Inject constructor(
         val existing = getContentObject(project, branch, path)
         val sha = existing.string("sha") ?: throw IllegalStateException("Could not read file sha: $path")
         val body = buildJsonObject {
-            put("message", "AgentWorkspace delete $path")
+            put("message", "Varen delete $path")
             put("sha", sha)
             put("branch", branch)
         }.toString().jsonBody()
@@ -298,7 +298,7 @@ class GitHubRemoteRepository @Inject constructor(
             path = BUILD_WORKFLOW_PATH,
             content = BUILD_WORKFLOW,
             sha = existing?.string("sha"),
-            message = "AgentWorkspace add APK build workflow",
+            message = "Varen add APK build workflow",
         )
     }
 
@@ -326,7 +326,7 @@ class GitHubRemoteRepository @Inject constructor(
             path = triggerPath,
             content = "build=${System.currentTimeMillis()}\n",
             sha = existing?.string("sha"),
-            message = "AgentWorkspace trigger APK build",
+            message = "Varen trigger APK build",
         )
     }
 
@@ -428,7 +428,7 @@ class GitHubRemoteRepository @Inject constructor(
         Request.Builder()
             .url(url)
             .header("Accept", "application/vnd.github+json")
-            .header("User-Agent", "AgentWorkspace-Android")
+            .header("User-Agent", "Varen-Android")
             .apply { header("Authorization", "Bearer ${requireToken()}") }
 
     private fun executeElement(request: Request): kotlinx.serialization.json.JsonElement {
@@ -521,7 +521,7 @@ class GitHubRemoteRepository @Inject constructor(
     private companion object {
         const val GITHUB_API = "https://api.github.com"
         const val GITHUB_CREDENTIAL_ID = "github.project_import"
-        const val BUILD_WORKFLOW_NAME = "AgentWorkspace APK Build"
+        const val BUILD_WORKFLOW_NAME = "Varen APK Build"
         const val BUILD_WORKFLOW_FILE = "agentworkspace-build.yml"
         const val BUILD_WORKFLOW_PATH = ".github/workflows/$BUILD_WORKFLOW_FILE"
         const val BUILD_POLL_ATTEMPTS = 60

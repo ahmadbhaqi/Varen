@@ -62,7 +62,7 @@ class AuthManager @Inject constructor(
         private const val KEY_VERIFIER = "verifier"
         private const val KEY_REDIRECT_URI = "redirect_uri"
         private const val OAUTH_TIMEOUT_MS = 5L * 60 * 1000L
-        private const val AUTH_SUCCESS_HTML = "<!DOCTYPE html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Authorized</title><style>body{font-family:-apple-system,system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#0f1117;color:#e6e6e6}.c{text-align:center}.h{font-size:22px;font-weight:600;margin:16px 0 6px}.p{opacity:.7}.d{margin-top:20px;font-size:13px;opacity:.5}</style></head><body><div class='c'><div class='h'>Authorization complete</div><div class='p'>You can close this tab and return to the app.</div><div class='d'>Agent Workspace</div></div></body></html>"
+        private const val AUTH_SUCCESS_HTML = "<!DOCTYPE html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Authorized</title><style>body{font-family:-apple-system,system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#0f1117;color:#e6e6e6}.c{text-align:center}.h{font-size:22px;font-weight:600;margin:16px 0 6px}.p{opacity:.7}.d{margin-top:20px;font-size:13px;opacity:.5}</style></head><body><div class='c'><div class='h'>Authorization complete</div><div class='p'>You can close this tab and return to the app.</div><div class='d'>Varen</div></div></body></html>"
     }
 
     private val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)

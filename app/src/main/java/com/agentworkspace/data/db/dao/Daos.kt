@@ -6,6 +6,9 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface UsageDao {
+    @Query("SELECT * FROM usage_records ORDER BY timestamp DESC")
+    fun getAllUsage(): Flow<List<UsageRecordEntity>>
+
     @Query("SELECT * FROM usage_records ORDER BY timestamp DESC LIMIT :limit")
     fun getRecentUsage(limit: Int = 100): Flow<List<UsageRecordEntity>>
 

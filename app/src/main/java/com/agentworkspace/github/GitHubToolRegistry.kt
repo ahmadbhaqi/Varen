@@ -114,7 +114,7 @@ class GitHubToolRegistry @Inject constructor(
             path = path,
             content = content,
             overwrite = overwrite,
-            message = "AgentWorkspace write $path",
+            message = "Varen write $path",
         )
         return ok("path" to path, "branch" to branch, "bytes" to content.length, "written" to true)
     }

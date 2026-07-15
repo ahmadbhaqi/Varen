@@ -28,7 +28,7 @@ class RunNotificationController @Inject constructor(
                 "Agent runs",
                 NotificationManager.IMPORTANCE_LOW,
             ).apply {
-                description = "Progress and controls for active AgentWorkspace tasks"
+                description = "Progress and controls for active Varen tasks"
                 setShowBadge(false)
             },
         )
@@ -37,7 +37,7 @@ class RunNotificationController @Inject constructor(
     fun build(runId: String, taskTitle: String, status: RunStatus): Notification {
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle(taskTitle.ifBlank { "AgentWorkspace is working" })
+            .setContentTitle(taskTitle.ifBlank { "Varen is working" })
             .setContentText(status.displayText())
             .setCategory(NotificationCompat.CATEGORY_PROGRESS)
             .setContentIntent(openAppIntent(runId))

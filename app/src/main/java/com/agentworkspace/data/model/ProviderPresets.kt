@@ -254,7 +254,7 @@ object ProviderPresets {
             models = listOf("openai/gpt-4o", "anthropic/claude-3.5-sonnet", "google/gemini-2.5-pro"),
             apiKeyUrl = "https://openrouter.ai/settings/keys",
             signupUrl = "https://openrouter.ai",
-            headers = mapOf("HTTP-Referer" to "https://agentworkspace.local", "X-Title" to "AgentWorkspace"),
+            headers = mapOf("HTTP-Referer" to "https://varen.local", "X-Title" to "Varen"),
             serviceKinds = listOf("llm", "embedding", "tts", "imageToText"),
         ),
         openAiProvider("groq", "Groq", "https://api.groq.com/openai/v1/chat/completions", "Fast OpenAI-compatible inference for Llama, Qwen, and GPT-OSS.", ProviderCategory.OFFICIAL, 0xFFF55036, listOf("llama-3.3-70b-versatile", "qwen/qwen3-32b", "openai/gpt-oss-120b"), "https://console.groq.com/keys", "https://groq.com", serviceKinds = listOf("llm", "imageToText", "stt")),

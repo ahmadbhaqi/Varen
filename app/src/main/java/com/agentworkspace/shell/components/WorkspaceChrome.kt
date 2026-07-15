@@ -923,14 +923,14 @@ fun WorkspaceDrawerContent(
             Spacer(Modifier.width(12.dp))
             Column {
                 Text(
-                    "ANTIGRAVITY",
+                    "VAREN",
                     style = MaterialTheme.typography.titleMedium,
                     color = AiTheme.colors.textPrimary,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp
                 )
                 Text(
-                    "Agent Workspace v3.5",
+                    "Android agent workspace",
                     style = MonoCaption,
                     color = AiTheme.colors.textSecondary
                 )

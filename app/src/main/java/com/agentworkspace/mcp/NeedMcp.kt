@@ -22,6 +22,6 @@ object NeedMcp {
     /** Protocol versions we are willing to negotiate during initialize. */
     val PROTOCOL_VERSIONS = listOf("2024-11-05", "2025-03-26", "2025-06-18")
 
-    const val CLIENT_NAME = "AgentWorkspace"
+    const val CLIENT_NAME = "Varen"
     const val CLIENT_VERSION = "1.0.0"
 }

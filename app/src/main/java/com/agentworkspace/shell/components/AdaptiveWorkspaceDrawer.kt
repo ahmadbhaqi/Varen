@@ -103,7 +103,7 @@ fun AdaptiveWorkspaceDrawer(
             Spacer(Modifier.width(11.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    text = "Agent Workspace",
+                    text = "Varen",
                     style = MaterialTheme.typography.titleSmall,
                     color = AppTheme.colors.textPrimary,
                     fontWeight = FontWeight.SemiBold,

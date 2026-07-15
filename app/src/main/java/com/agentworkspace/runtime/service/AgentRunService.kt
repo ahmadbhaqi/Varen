@@ -44,7 +44,7 @@ class AgentRunService : Service() {
         val initialStatus = RunServicePolicy.initialStatus(action)
         startForeground(
             notifications.notificationId(notificationRunId),
-            notifications.build(notificationRunId, "AgentWorkspace is working", initialStatus),
+            notifications.build(notificationRunId, "Varen is working", initialStatus),
         )
 
         if (runId != null) {

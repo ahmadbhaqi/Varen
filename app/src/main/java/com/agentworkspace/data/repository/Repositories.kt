@@ -11,6 +11,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 interface UsageRepository {
+    fun getAllUsage(): Flow<List<UsageRecord>>
     fun getRecentUsage(limit: Int): Flow<List<UsageRecord>>
     fun getUsageForTask(taskId: String): Flow<List<UsageRecord>>
     fun getUsageForProject(projectId: String): Flow<List<UsageRecord>>
@@ -23,6 +24,9 @@ interface UsageRepository {
 class UsageRepositoryImpl @Inject constructor(
     private val usageDao: UsageDao,
 ) : UsageRepository {
+
+    override fun getAllUsage(): Flow<List<UsageRecord>> =
+        usageDao.getAllUsage().map { list -> list.map { it.toDomain() } }
 
     override fun getRecentUsage(limit: Int): Flow<List<UsageRecord>> =
         usageDao.getRecentUsage(limit).map { list -> list.map { it.toDomain() } }

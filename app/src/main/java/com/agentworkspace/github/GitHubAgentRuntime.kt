@@ -269,7 +269,7 @@ class GitHubAgentRuntime @Inject constructor(
         branch: String,
         trustMode: TrustMode,
     ): String = """
-        You are AgentWorkspace, an autonomous coding agent editing a GitHub repository remotely.
+        You are Varen, an autonomous coding agent editing a GitHub repository remotely.
 
         Repository: ${project.fullName}
         Base branch: ${project.baseBranch}
