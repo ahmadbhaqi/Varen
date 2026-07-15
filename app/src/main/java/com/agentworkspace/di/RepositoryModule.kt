@@ -29,6 +29,10 @@ import com.agentworkspace.runtime.service.RunLeaseManager
 import com.agentworkspace.runtime.service.RunServiceController
 import com.agentworkspace.readiness.application.AndroidWorkspaceAccessChecker
 import com.agentworkspace.readiness.domain.WorkspaceAccessChecker
+import com.agentworkspace.data.security.CredentialMigrationSource
+import com.agentworkspace.data.security.CredentialStore
+import com.agentworkspace.data.security.CredentialVault
+import com.agentworkspace.data.security.RoomCredentialMigrationSource
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -134,4 +138,14 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindWorkspaceAccessChecker(impl: AndroidWorkspaceAccessChecker): WorkspaceAccessChecker
+
+    @Binds
+    @Singleton
+    abstract fun bindCredentialStore(impl: CredentialVault): CredentialStore
+
+    @Binds
+    @Singleton
+    abstract fun bindCredentialMigrationSource(
+        impl: RoomCredentialMigrationSource,
+    ): CredentialMigrationSource
 }

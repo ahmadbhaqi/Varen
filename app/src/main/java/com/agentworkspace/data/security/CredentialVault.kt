@@ -16,10 +16,10 @@ import javax.inject.Singleton
 @Singleton
 class CredentialVault @Inject constructor(
     @ApplicationContext context: Context,
-) {
+) : CredentialStore {
     private val prefs = context.getSharedPreferences("agentworkspace_credential_vault", Context.MODE_PRIVATE)
 
-    fun put(connectionId: String, field: Field, value: String) {
+    override fun put(connectionId: String, field: CredentialField, value: String) {
         if (value.isBlank()) {
             remove(connectionId, field)
             return
@@ -32,7 +32,7 @@ class CredentialVault @Inject constructor(
             .apply()
     }
 
-    fun get(connectionId: String, field: Field): String? {
+    override fun get(connectionId: String, field: CredentialField): String? {
         val stored = prefs.getString(prefKey(connectionId, field), null) ?: return null
         val parts = stored.split(":", limit = 2)
         if (parts.size != 2) return null
@@ -45,15 +45,15 @@ class CredentialVault @Inject constructor(
         }.getOrNull()
     }
 
-    fun removeAll(connectionId: String) {
+    override fun removeAll(connectionId: String) {
         prefs.edit()
-            .remove(prefKey(connectionId, Field.API_KEY))
-            .remove(prefKey(connectionId, Field.ACCESS_TOKEN))
-            .remove(prefKey(connectionId, Field.REFRESH_TOKEN))
+            .remove(prefKey(connectionId, CredentialField.API_KEY))
+            .remove(prefKey(connectionId, CredentialField.ACCESS_TOKEN))
+            .remove(prefKey(connectionId, CredentialField.REFRESH_TOKEN))
             .apply()
     }
 
-    private fun remove(connectionId: String, field: Field) {
+    private fun remove(connectionId: String, field: CredentialField) {
         prefs.edit().remove(prefKey(connectionId, field)).apply()
     }
 
@@ -74,16 +74,10 @@ class CredentialVault @Inject constructor(
         return generator.generateKey()
     }
 
-    private fun prefKey(connectionId: String, field: Field): String = "$connectionId:${field.storageKey}"
+    private fun prefKey(connectionId: String, field: CredentialField): String = "$connectionId:${field.storageKey}"
 
     private fun ByteArray.toBase64(): String =
         android.util.Base64.encodeToString(this, android.util.Base64.NO_WRAP)
-
-    enum class Field(val marker: String, val storageKey: String) {
-        API_KEY("vault:apiKey", "api_key"),
-        ACCESS_TOKEN("vault:accessToken", "access_token"),
-        REFRESH_TOKEN("vault:refreshToken", "refresh_token"),
-    }
 
     private companion object {
         const val ANDROID_KEYSTORE = "AndroidKeyStore"

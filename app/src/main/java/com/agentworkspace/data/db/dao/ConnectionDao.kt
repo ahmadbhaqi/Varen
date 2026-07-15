@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.Flow
 interface ConnectionDao {
     @Query("SELECT * FROM connections ORDER BY createdAt DESC")
     fun getAllConnections(): Flow<List<ConnectionEntity>>
+    @Query("SELECT * FROM connections")
+    suspend fun getAllConnectionsOnce(): List<ConnectionEntity>
     @Query("SELECT * FROM connections WHERE id = :id")
     fun getConnectionById(id: String): Flow<ConnectionEntity?>
     @Query("SELECT * FROM connections WHERE id = :id")
@@ -31,6 +33,12 @@ interface ConnectionDao {
     suspend fun updateAuthState(id: String, authState: AuthState)
     @Query("UPDATE connections SET accessToken = :token, refreshToken = :refresh, tokenExpiry = :expiry, authState = :state WHERE id = :id")
     suspend fun updateTokens(id: String, token: String?, refresh: String?, expiry: Long?, state: AuthState)
+    @Query("UPDATE connections SET apiKey = :marker WHERE id = :id AND apiKey = :plaintext")
+    suspend fun replaceApiKey(id: String, plaintext: String, marker: String): Int
+    @Query("UPDATE connections SET accessToken = :marker WHERE id = :id AND accessToken = :plaintext")
+    suspend fun replaceAccessToken(id: String, plaintext: String, marker: String): Int
+    @Query("UPDATE connections SET refreshToken = :marker WHERE id = :id AND refreshToken = :plaintext")
+    suspend fun replaceRefreshToken(id: String, plaintext: String, marker: String): Int
     @Query("UPDATE connections SET presetId = :presetId, authScheme = :scheme WHERE id = :id")
     suspend fun updatePreset(id: String, presetId: String?, scheme: AuthScheme)
 }

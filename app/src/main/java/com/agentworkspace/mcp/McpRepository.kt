@@ -1,6 +1,7 @@
 package com.agentworkspace.mcp
 
 import com.agentworkspace.data.security.CredentialVault
+import com.agentworkspace.data.security.CredentialField
 import com.agentworkspace.mcp.client.McpClient
 import com.agentworkspace.mcp.client.McpException
 import com.agentworkspace.mcp.client.text
@@ -44,10 +45,10 @@ class McpRepository @Inject constructor(
     private val _tools = MutableStateFlow<List<McpTool>>(emptyList())
     val tools: StateFlow<List<McpTool>> = _tools.asStateFlow()
 
-    fun getApiKey(): String? = vault.get(NeedMcp.CONNECTION_ID, CredentialVault.Field.API_KEY)
+    fun getApiKey(): String? = vault.get(NeedMcp.CONNECTION_ID, CredentialField.API_KEY)
 
     fun saveApiKey(key: String) {
-        vault.put(NeedMcp.CONNECTION_ID, CredentialVault.Field.API_KEY, key)
+        vault.put(NeedMcp.CONNECTION_ID, CredentialField.API_KEY, key)
     }
 
     fun clearApiKey() {

@@ -5,7 +5,8 @@ import com.agentworkspace.data.db.dao.ModelDao
 import com.agentworkspace.data.db.entity.ConnectionEntity
 import com.agentworkspace.data.db.entity.ModelEntity
 import com.agentworkspace.data.model.*
-import com.agentworkspace.data.security.CredentialVault
+import com.agentworkspace.data.security.CredentialField
+import com.agentworkspace.data.security.CredentialStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
@@ -47,7 +48,7 @@ interface ConnectionRepository {
 class ConnectionRepositoryImpl @Inject constructor(
     private val connectionDao: ConnectionDao,
     private val modelDao: ModelDao,
-    private val credentialVault: CredentialVault,
+    private val credentialStore: CredentialStore,
 ) : ConnectionRepository {
 
     override fun getAllConnections(): Flow<List<Connection>> =
@@ -89,7 +90,7 @@ class ConnectionRepositoryImpl @Inject constructor(
     }
 
     override suspend fun deleteConnection(id: String) {
-        credentialVault.removeAll(id)
+        credentialStore.removeAll(id)
         connectionDao.deleteConnectionById(id)
     }
 
@@ -154,24 +155,24 @@ class ConnectionRepositoryImpl @Inject constructor(
         modelDao.getModelById(id)?.toDomain()
 
     private fun Connection.hydrateCredentials(): Connection = copy(
-        apiKey = resolveCredential(id, apiKey, CredentialVault.Field.API_KEY),
-        accessToken = resolveCredential(id, accessToken, CredentialVault.Field.ACCESS_TOKEN),
-        refreshToken = resolveCredential(id, refreshToken, CredentialVault.Field.REFRESH_TOKEN),
+        apiKey = resolveCredential(id, apiKey, CredentialField.API_KEY),
+        accessToken = resolveCredential(id, accessToken, CredentialField.ACCESS_TOKEN),
+        refreshToken = resolveCredential(id, refreshToken, CredentialField.REFRESH_TOKEN),
     )
 
     private fun Connection.secureForStorage(): Connection = copy(
-        apiKey = secureCredential(id, apiKey, CredentialVault.Field.API_KEY),
-        accessToken = secureCredential(id, accessToken, CredentialVault.Field.ACCESS_TOKEN),
-        refreshToken = secureCredential(id, refreshToken, CredentialVault.Field.REFRESH_TOKEN),
+        apiKey = secureCredential(id, apiKey, CredentialField.API_KEY),
+        accessToken = secureCredential(id, accessToken, CredentialField.ACCESS_TOKEN),
+        refreshToken = secureCredential(id, refreshToken, CredentialField.REFRESH_TOKEN),
     )
 
-    private fun resolveCredential(connectionId: String, stored: String?, field: CredentialVault.Field): String? =
-        if (stored == field.marker) credentialVault.get(connectionId, field) else stored
+    private fun resolveCredential(connectionId: String, stored: String?, field: CredentialField): String? =
+        if (stored == field.marker) credentialStore.get(connectionId, field) else stored
 
-    private fun secureCredential(connectionId: String, value: String?, field: CredentialVault.Field): String? {
+    private fun secureCredential(connectionId: String, value: String?, field: CredentialField): String? {
         if (value == null) return null
         if (value == field.marker) return value
-        credentialVault.put(connectionId, field, value)
+        credentialStore.put(connectionId, field, value)
         return field.marker
     }
 }

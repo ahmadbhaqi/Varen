@@ -3,6 +3,7 @@ package com.agentworkspace.github
 import android.content.Context
 import android.util.Base64
 import com.agentworkspace.data.security.CredentialVault
+import com.agentworkspace.data.security.CredentialField
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -62,7 +63,7 @@ class GitHubRemoteRepository @Inject constructor(
     ): GitHubRemoteProject = withContext(Dispatchers.IO) {
         val (owner, name) = parseGitHubRepositoryInput(repoInput)
         if (tokenInput.isNotBlank()) {
-            credentialVault.put(GITHUB_CREDENTIAL_ID, CredentialVault.Field.ACCESS_TOKEN, tokenInput.trim())
+            credentialVault.put(GITHUB_CREDENTIAL_ID, CredentialField.ACCESS_TOKEN, tokenInput.trim())
         }
         requireToken()
         val branch = branchInput.trim().ifBlank {
@@ -453,7 +454,7 @@ class GitHubRemoteRepository @Inject constructor(
     }
 
     private fun savedToken(): String? =
-        credentialVault.get(GITHUB_CREDENTIAL_ID, CredentialVault.Field.ACCESS_TOKEN)
+        credentialVault.get(GITHUB_CREDENTIAL_ID, CredentialField.ACCESS_TOKEN)
 
     private fun requireToken(): String =
         savedToken()?.takeIf { it.isNotBlank() }
