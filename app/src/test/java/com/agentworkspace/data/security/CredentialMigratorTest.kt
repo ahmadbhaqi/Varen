@@ -15,7 +15,7 @@ class CredentialMigratorTest {
         val store = FakeCredentialStore()
         val source = FakeMigrationSource(records)
 
-        val report = CredentialMigrator(store, source).execute()
+        val report = CredentialMigrator(store, source, CredentialMutationCoordinator()).execute()
 
         assertEquals(CredentialMigrationReport(migrated = 2, failed = 0), report)
         assertEquals(records, source.replaced)
@@ -28,7 +28,7 @@ class CredentialMigratorTest {
         val store = FakeCredentialStore(readBackOverride = "different")
         val source = FakeMigrationSource(listOf(record))
 
-        val report = CredentialMigrator(store, source).execute()
+        val report = CredentialMigrator(store, source, CredentialMutationCoordinator()).execute()
 
         assertEquals(CredentialMigrationReport(migrated = 0, failed = 1), report)
         assertTrue(source.replaced.isEmpty())
@@ -41,7 +41,7 @@ class CredentialMigratorTest {
         val store = FakeCredentialStore()
         val source = FakeMigrationSource(listOf(record), failReplacement = true)
 
-        val report = CredentialMigrator(store, source).execute()
+        val report = CredentialMigrator(store, source, CredentialMutationCoordinator()).execute()
 
         assertEquals(CredentialMigrationReport(migrated = 0, failed = 1), report)
         assertEquals(listOf(record), source.remaining)

@@ -90,6 +90,17 @@ class LegacyEventWriter @Inject constructor(
                             buildJsonObject { put("message", event.error) }.toString(),
                         )
                     }
+                    is AgentEvent.VerificationSucceeded -> {
+                        flushAssistant()
+                        timeline.appendEvent(
+                            runId,
+                            RunEventKind.VERIFICATION_SUCCEEDED,
+                            buildJsonObject {
+                                put("method", event.method)
+                                put("detail", event.detail)
+                            }.toString(),
+                        )
+                    }
                     is AgentEvent.TaskComplete -> flushAssistant()
                     is AgentEvent.ApprovalRequired,
                     is AgentEvent.ApprovalResolved,
@@ -108,6 +119,7 @@ class LegacyEventWriter @Inject constructor(
         is AgentEvent.ToolCallFinished -> taskId
         is AgentEvent.ApprovalRequired -> taskId
         is AgentEvent.ApprovalResolved -> taskId
+        is AgentEvent.VerificationSucceeded -> taskId
         is AgentEvent.TaskComplete -> taskId
         is AgentEvent.TaskFailed -> taskId
         is AgentEvent.Error -> taskId

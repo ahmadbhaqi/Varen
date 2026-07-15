@@ -7,6 +7,7 @@ import com.agentworkspace.data.db.entity.ModelEntity
 import com.agentworkspace.data.model.*
 import com.agentworkspace.data.security.CredentialField
 import com.agentworkspace.data.security.CredentialStore
+import com.agentworkspace.data.security.CredentialMutationCoordinator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
@@ -49,6 +50,7 @@ class ConnectionRepositoryImpl @Inject constructor(
     private val connectionDao: ConnectionDao,
     private val modelDao: ModelDao,
     private val credentialStore: CredentialStore,
+    private val credentialMutationCoordinator: CredentialMutationCoordinator,
 ) : ConnectionRepository {
 
     override fun getAllConnections(): Flow<List<Connection>> =
@@ -74,7 +76,7 @@ class ConnectionRepositoryImpl @Inject constructor(
         providerType: ProviderType,
         baseUrl: String?,
         apiKey: String?,
-    ): Connection {
+    ): Connection = credentialMutationCoordinator.withLock {
         val connection = Connection(
             name = name,
             providerType = providerType,
@@ -82,16 +84,20 @@ class ConnectionRepositoryImpl @Inject constructor(
             apiKey = apiKey,
         )
         connectionDao.upsertConnection(ConnectionEntity.fromDomain(connection.secureForStorage()))
-        return connection
+        connection
     }
 
     override suspend fun updateConnection(connection: Connection) {
-        connectionDao.upsertConnection(ConnectionEntity.fromDomain(connection.secureForStorage()))
+        credentialMutationCoordinator.withLock {
+            connectionDao.upsertConnection(ConnectionEntity.fromDomain(connection.secureForStorage()))
+        }
     }
 
     override suspend fun deleteConnection(id: String) {
-        credentialStore.removeAll(id)
-        connectionDao.deleteConnectionById(id)
+        credentialMutationCoordinator.withLock {
+            credentialStore.removeAll(id)
+            connectionDao.deleteConnectionById(id)
+        }
     }
 
     override suspend fun updateHealth(id: String, healthy: Boolean) {
@@ -110,22 +116,24 @@ class ConnectionRepositoryImpl @Inject constructor(
         tokenExpiry: Long?,
         authState: AuthState,
     ) {
-        val existing = connectionDao.getConnectionByIdOnce(id)
-        if (existing != null) {
-            val storageConnection = existing.toDomain().copy(
-                apiKey = apiKey ?: existing.apiKey,
-                accessToken = accessToken,
-                refreshToken = refreshToken,
-                tokenExpiry = tokenExpiry,
-                authState = authState,
-            ).secureForStorage()
-            connectionDao.upsertConnection(existing.copy(
-                apiKey = storageConnection.apiKey,
-                accessToken = storageConnection.accessToken,
-                refreshToken = storageConnection.refreshToken,
-                tokenExpiry = tokenExpiry,
-                authState = authState,
-            ))
+        credentialMutationCoordinator.withLock {
+            val existing = connectionDao.getConnectionByIdOnce(id)
+            if (existing != null) {
+                val storageConnection = existing.toDomain().copy(
+                    apiKey = apiKey ?: existing.apiKey,
+                    accessToken = accessToken,
+                    refreshToken = refreshToken,
+                    tokenExpiry = tokenExpiry,
+                    authState = authState,
+                ).secureForStorage()
+                connectionDao.upsertConnection(existing.copy(
+                    apiKey = storageConnection.apiKey,
+                    accessToken = storageConnection.accessToken,
+                    refreshToken = storageConnection.refreshToken,
+                    tokenExpiry = tokenExpiry,
+                    authState = authState,
+                ))
+            }
         }
     }
 

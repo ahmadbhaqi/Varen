@@ -60,6 +60,7 @@ enum class RunEventKind {
     RECOVERY_STARTED,
     PAUSED,
     CANCELLED,
+    VERIFICATION_SUCCEEDED,
     COMPLETED,
     FAILED,
 }

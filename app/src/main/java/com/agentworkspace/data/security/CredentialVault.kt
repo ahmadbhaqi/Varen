@@ -27,9 +27,10 @@ class CredentialVault @Inject constructor(
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey())
         val encrypted = cipher.doFinal(value.toByteArray(StandardCharsets.UTF_8))
-        prefs.edit()
+        val persisted = prefs.edit()
             .putString(prefKey(connectionId, field), "${cipher.iv.toBase64()}:${encrypted.toBase64()}")
-            .apply()
+            .commit()
+        check(persisted) { "Unable to persist encrypted credential" }
     }
 
     override fun get(connectionId: String, field: CredentialField): String? {

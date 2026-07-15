@@ -3,6 +3,7 @@ package com.agentworkspace.data.security
 import com.agentworkspace.data.db.dao.ConnectionDao
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.sync.Mutex
 
 enum class CredentialField(val marker: String, val storageKey: String) {
     API_KEY("vault:apiKey", "api_key"),
@@ -33,11 +34,26 @@ data class CredentialMigrationReport(
 )
 
 @Singleton
+class CredentialMutationCoordinator @Inject constructor() {
+    private val mutex = Mutex()
+
+    suspend fun <T> withLock(block: suspend () -> T): T {
+        mutex.lock()
+        return try {
+            block()
+        } finally {
+            mutex.unlock()
+        }
+    }
+}
+
+@Singleton
 class CredentialMigrator @Inject constructor(
     private val credentialStore: CredentialStore,
     private val migrationSource: CredentialMigrationSource,
+    private val mutationCoordinator: CredentialMutationCoordinator,
 ) {
-    suspend fun execute(): CredentialMigrationReport {
+    suspend fun execute(): CredentialMigrationReport = mutationCoordinator.withLock {
         var migrated = 0
         var failed = 0
         migrationSource.findLegacyCredentials().forEach { credential ->
@@ -58,7 +74,7 @@ class CredentialMigrator @Inject constructor(
                 failed++
             }
         }
-        return CredentialMigrationReport(migrated = migrated, failed = failed)
+        CredentialMigrationReport(migrated = migrated, failed = failed)
     }
 }
 

@@ -6,7 +6,6 @@ import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.agentworkspace.data.model.AuthState
 import com.agentworkspace.data.model.DiffStatus
 import com.agentworkspace.data.model.HistoryEntry
 import com.agentworkspace.data.model.Project
@@ -23,6 +22,7 @@ import com.agentworkspace.github.GitHubRemoteRepository
 import com.agentworkspace.github.githubProjectPath
 import com.agentworkspace.github.isGitHubProjectPath
 import com.agentworkspace.github.parseGitHubProjectPath
+import com.agentworkspace.readiness.application.RuntimeReadinessCoordinator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -89,6 +89,7 @@ class ProjectViewModel @Inject constructor(
     private val historyRepository: HistoryRepository,
     private val connectionRepository: ConnectionRepository,
     private val githubRemoteRepository: GitHubRemoteRepository,
+    private val runtimeReadinessCoordinator: RuntimeReadinessCoordinator,
 ) : ViewModel() {
 
     private val _createState = MutableStateFlow<CreateProjectState>(CreateProjectState.Idle)
@@ -118,46 +119,15 @@ class ProjectViewModel @Inject constructor(
             activitySignals,
             connectionRepository.getAllConnections(),
         ) { project, signals, connections ->
-            val enabled = connections.filter { it.isEnabled }
-            val preferredConnection = project?.preferredConnectionId?.let { id ->
-                enabled.firstOrNull { it.id == id }
-            }
-            val authenticated = enabled.filter { it.authState == AuthState.AUTHENTICATED }
-            val connection = preferredConnection ?: authenticated.firstOrNull() ?: enabled.firstOrNull()
-            val preferredModel = project?.preferredModelId
-            val model = preferredModel?.let { id ->
-                connections.flatMap { it.models }.firstOrNull { it.id == id }
-            } ?: connection?.models?.firstOrNull { it.isRecommended }
-                ?: connection?.models?.firstOrNull()
-
-            val readiness = when {
-                connection == null -> ReadinessState.SETUP_REQUIRED
-                connection.authState != AuthState.AUTHENTICATED -> ReadinessState.NEEDS_AUTH
-                model == null -> ReadinessState.NEEDS_MODEL
-                connection.preset?.supportsDirectRuntime == false -> ReadinessState.REGISTERED_ONLY
-                else -> ReadinessState.READY
-            }
-            val label = when (readiness) {
-                ReadinessState.READY -> "Ready to run"
-                ReadinessState.NEEDS_MODEL -> "Select a model"
-                ReadinessState.NEEDS_AUTH -> "Reconnect provider"
-                ReadinessState.REGISTERED_ONLY -> "Login registered"
-                ReadinessState.SETUP_REQUIRED -> "Add connection"
-            }
-            val note = when (readiness) {
-                ReadinessState.REGISTERED_ONLY -> "This provider is connected, but its native Android runtime adapter is not executable yet."
-                ReadinessState.NEEDS_MODEL -> "Choose a project model so the agent never switches silently."
-                ReadinessState.NEEDS_AUTH -> "The provider exists, but authentication is not ready for agent work."
-                ReadinessState.SETUP_REQUIRED -> "Add a model connection before starting project work."
-                ReadinessState.READY -> null
-            }
+            val runtimeReadiness = runtimeReadinessCoordinator.evaluate(project, connections)
+            val readiness = projectReadinessSummary(project, connections, runtimeReadiness)
 
             ProjectOverview(
-                readiness = readiness,
-                readinessLabel = label,
-                activeModel = model?.name ?: "No model selected",
-                activeConnection = connection?.name ?: "No connection",
-                runtimeNote = note,
+                readiness = readiness.readiness,
+                readinessLabel = readiness.label,
+                activeModel = readiness.activeModel,
+                activeConnection = readiness.activeConnection,
+                runtimeNote = readiness.note,
                 activeTasks = signals.tasks.count { it.status in activeStatuses },
                 completedTasks = signals.tasks.count { it.status == TaskStatus.COMPLETED },
                 pendingReview = signals.tasks.count { it.status == TaskStatus.WAITING_APPROVAL } +

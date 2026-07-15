@@ -93,16 +93,29 @@ class RuntimePresenterTest {
     }
 
     @Test
-    fun `github completion reports its persisted remote verification evidence`() {
-        val evidence = RuntimePresenter.completionEvidence(
-            run(
-                status = RunStatus.COMPLETED,
-                configurationJson = configurationJson(WorkspaceKind.GITHUB),
-            ),
+    fun `github completion requires a persisted remote verification success event`() {
+        val run = run(
+            status = RunStatus.COMPLETED,
+            configurationJson = configurationJson(WorkspaceKind.GITHUB),
         )
 
-        assertEquals("Verified remotely", evidence.verificationLabel)
-        assertTrue(evidence.limitations.isEmpty())
+        assertEquals(
+            "Verification unavailable",
+            RuntimePresenter.completionEvidence(run, emptyList()).verificationLabel,
+        )
+        assertEquals(
+            "Verified remotely",
+            RuntimePresenter.completionEvidence(
+                run,
+                listOf(
+                    event(
+                        sequence = 1,
+                        kind = RunEventKind.VERIFICATION_SUCCEEDED,
+                        payload = "{\"method\":\"github_actions_apk\"}",
+                    ),
+                ),
+            ).verificationLabel,
+        )
     }
 
     @Test

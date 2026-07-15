@@ -22,14 +22,28 @@ class LegacyEventWriterTest {
                 AgentEvent.Message("task-1", "world"),
                 AgentEvent.ToolCallStarted("task-1", "call-1", "read_file", "{\"path\":\"README.md\"}"),
                 AgentEvent.ToolCallFinished("task-1", "call-1", "read_file", "ok"),
+                AgentEvent.VerificationSucceeded(
+                    taskId = "task-1",
+                    method = "github_actions_apk",
+                    detail = "https://github.com/owner/repo/actions/runs/1",
+                ),
                 AgentEvent.Message("another-task", "ignored"),
             ),
         )
 
         assertEquals(listOf("assistant" to "Hello world"), store.messages)
         assertEquals(
-            listOf(RunEventKind.MESSAGE, RunEventKind.TOOL_STARTED, RunEventKind.TOOL_FINISHED),
+            listOf(
+                RunEventKind.MESSAGE,
+                RunEventKind.TOOL_STARTED,
+                RunEventKind.TOOL_FINISHED,
+                RunEventKind.VERIFICATION_SUCCEEDED,
+            ),
             store.events.map { it.first },
+        )
+        assertEquals(
+            true,
+            store.events.last().second.contains("github_actions_apk"),
         )
     }
 

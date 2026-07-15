@@ -480,6 +480,11 @@ sealed class AgentEvent {
     data class ToolCallFinished(val taskId: String, val callId: String, val tool: String, val result: String) : AgentEvent()
     data class ApprovalRequired(val taskId: String, val action: AgentAction, val decision: ApprovalDecision) : AgentEvent()
     data class ApprovalResolved(val taskId: String, val action: AgentAction, val approved: Boolean) : AgentEvent()
+    data class VerificationSucceeded(
+        val taskId: String,
+        val method: String,
+        val detail: String,
+    ) : AgentEvent()
     data class TaskComplete(val taskId: String) : AgentEvent()
     data class TaskFailed(val taskId: String, val error: String) : AgentEvent()
     data class Error(val taskId: String, val message: String) : AgentEvent()

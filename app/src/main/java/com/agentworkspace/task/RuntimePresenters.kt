@@ -47,7 +47,7 @@ object RuntimePresenter {
                     add(
                         ChatLine(
                             ChatLine.Role.SYSTEM,
-                            "Verification: ${completionEvidence(run).verificationLabel}",
+                            "Verification: ${completionEvidence(run, events).verificationLabel}",
                         ),
                     )
                 }
@@ -78,7 +78,10 @@ object RuntimePresenter {
             )
         }
 
-    fun completionEvidence(run: AgentRunEntity): CompletionEvidence {
+    fun completionEvidence(
+        run: AgentRunEntity,
+        events: List<RunEventEntity> = emptyList(),
+    ): CompletionEvidence {
         val configuration = runCatching {
             RunConfigurationCodec.decode(run.configurationJson)
         }.getOrNull() ?: return CompletionEvidence(
@@ -86,7 +89,11 @@ object RuntimePresenter {
             limitations = emptyList(),
         )
         val label = when {
-            WorkspaceCapability.REMOTE_VERIFICATION in configuration.capabilities ->
+            WorkspaceCapability.REMOTE_VERIFICATION in configuration.capabilities &&
+                events.any { event ->
+                    event.kind == RunEventKind.VERIFICATION_SUCCEEDED &&
+                        event.payload().string("method") == "github_actions_apk"
+                } ->
                 "Verified remotely"
             "COMMAND_EXECUTION_UNAVAILABLE" in configuration.limitations ->
                 "Not command-verified"
@@ -128,6 +135,10 @@ object RuntimePresenter {
             RunEventKind.RECOVERY_STARTED -> ChatLine(ChatLine.Role.SYSTEM, "Restoring task")
             RunEventKind.PAUSED -> ChatLine(ChatLine.Role.SYSTEM, "Task paused")
             RunEventKind.CANCELLED -> ChatLine(ChatLine.Role.SYSTEM, "Task cancelled by user")
+            RunEventKind.VERIFICATION_SUCCEEDED -> ChatLine(
+                ChatLine.Role.SYSTEM,
+                "Remote verification succeeded",
+            )
             RunEventKind.COMPLETED -> ChatLine(ChatLine.Role.SYSTEM, "Task complete")
             RunEventKind.FAILED -> ChatLine(
                 ChatLine.Role.ERROR,

@@ -289,6 +289,13 @@ class GitHubAgentRuntime @Inject constructor(
             outputSummary = finalSummary,
         )
         taskRepository.updateTask(current)
+        _events.emit(
+            AgentEvent.VerificationSucceeded(
+                taskId = current.id,
+                method = "github_actions_apk",
+                detail = build.runUrl,
+            ),
+        )
         record(current, HistoryType.TASK_COMPLETED, "GitHub task completed. APK: ${build.apkPath}", success = true)
         _events.emit(AgentEvent.Message(current.id, "APK ready: ${build.apkPath}"))
         _events.emit(AgentEvent.TaskComplete(current.id))
