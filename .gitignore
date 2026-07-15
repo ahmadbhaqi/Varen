@@ -36,6 +36,7 @@ google-services.json
 Thumbs.db
 
 # Local agent/research artifacts
+.worktrees/
 .superpowers/
 graphify-out/
 docs/superpowers/
