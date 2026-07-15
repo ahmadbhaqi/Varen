@@ -27,6 +27,8 @@ import com.agentworkspace.runtime.service.RunExecutor
 import com.agentworkspace.runtime.service.RunLeaseController
 import com.agentworkspace.runtime.service.RunLeaseManager
 import com.agentworkspace.runtime.service.RunServiceController
+import com.agentworkspace.readiness.application.AndroidWorkspaceAccessChecker
+import com.agentworkspace.readiness.domain.WorkspaceAccessChecker
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -128,4 +130,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindIdGenerator(impl: UuidGenerator): IdGenerator
+
+    @Binds
+    @Singleton
+    abstract fun bindWorkspaceAccessChecker(impl: AndroidWorkspaceAccessChecker): WorkspaceAccessChecker
 }
