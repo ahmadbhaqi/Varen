@@ -4,6 +4,11 @@ import com.agentworkspace.data.db.entity.runtime.AgentRunEntity
 import com.agentworkspace.data.db.entity.runtime.ApprovalRequestEntity
 import com.agentworkspace.data.db.entity.runtime.RunEventEntity
 import com.agentworkspace.data.model.Task
+import com.agentworkspace.data.model.TrustMode
+import com.agentworkspace.readiness.domain.WorkspaceCapabilityProfiles
+import com.agentworkspace.readiness.domain.WorkspaceKind
+import com.agentworkspace.runtime.data.RunConfigurationCodec
+import com.agentworkspace.runtime.domain.RunConfiguration
 import com.agentworkspace.runtime.domain.ApprovalStatus
 import com.agentworkspace.runtime.domain.RunEventKind
 import com.agentworkspace.runtime.domain.RunStatus
@@ -63,7 +68,56 @@ class RuntimePresenterTest {
         assertTrue(pending?.destructive == true)
     }
 
-    private fun run(status: RunStatus) = AgentRunEntity(
+    @Test
+    fun `local completion is explicitly not command verified`() {
+        val run = run(
+            status = RunStatus.COMPLETED,
+            configurationJson = configurationJson(WorkspaceKind.LOCAL_SAF),
+        )
+
+        val timeline = RuntimePresenter.timeline(
+            task = Task(id = "task-1", projectId = "project-1", title = "Task", goal = "Goal"),
+            run = run,
+            events = listOf(event(1, RunEventKind.COMPLETED)),
+        )
+
+        assertEquals(ChatLine(ChatLine.Role.SYSTEM, "Task complete"), timeline[0])
+        assertEquals(
+            ChatLine(ChatLine.Role.SYSTEM, "Verification: Not command-verified"),
+            timeline[1],
+        )
+        assertEquals(
+            listOf("COMMAND_EXECUTION_UNAVAILABLE"),
+            RuntimePresenter.completionEvidence(run).limitations,
+        )
+    }
+
+    @Test
+    fun `github completion reports its persisted remote verification evidence`() {
+        val evidence = RuntimePresenter.completionEvidence(
+            run(
+                status = RunStatus.COMPLETED,
+                configurationJson = configurationJson(WorkspaceKind.GITHUB),
+            ),
+        )
+
+        assertEquals("Verified remotely", evidence.verificationLabel)
+        assertTrue(evidence.limitations.isEmpty())
+    }
+
+    @Test
+    fun `invalid persisted configuration never implies verification`() {
+        val evidence = RuntimePresenter.completionEvidence(
+            run(status = RunStatus.COMPLETED, configurationJson = "{}"),
+        )
+
+        assertEquals("Verification unavailable", evidence.verificationLabel)
+    }
+
+    private fun run(
+        status: RunStatus,
+        configurationJson: String = "{}",
+    ) = AgentRunEntity(
         id = "run-1",
         taskId = "task-1",
         projectId = "project-1",
@@ -71,7 +125,7 @@ class RuntimePresenterTest {
         connectionId = "connection-1",
         providerModelId = "model-1",
         workspaceId = "content://workspace",
-        configurationJson = "{}",
+        configurationJson = configurationJson,
         createdAt = 1,
         updatedAt = 1,
     )
@@ -84,4 +138,28 @@ class RuntimePresenterTest {
         payloadJson = payload,
         createdAt = sequence,
     )
+
+    private fun configurationJson(kind: WorkspaceKind): String {
+        val profile = WorkspaceCapabilityProfiles.forKind(kind)
+        return RunConfigurationCodec.encode(
+            RunConfiguration(
+                connectionId = "connection-1",
+                providerModelId = "model-1",
+                workspaceId = if (kind == WorkspaceKind.GITHUB) {
+                    "github://owner/repo?branch=main"
+                } else {
+                    "content://workspace"
+                },
+                trustMode = TrustMode.GUIDED,
+                transport = "OPENAI_COMPATIBLE",
+                workspaceKind = kind,
+                capabilities = profile.capabilities,
+                limitations = if (kind == WorkspaceKind.LOCAL_SAF) {
+                    listOf("COMMAND_EXECUTION_UNAVAILABLE")
+                } else {
+                    emptyList()
+                },
+            ),
+        )
+    }
 }

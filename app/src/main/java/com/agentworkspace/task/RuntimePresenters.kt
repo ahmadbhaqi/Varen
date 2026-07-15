@@ -7,6 +7,8 @@ import com.agentworkspace.data.model.Task
 import com.agentworkspace.runtime.domain.ApprovalStatus
 import com.agentworkspace.runtime.domain.RunEventKind
 import com.agentworkspace.runtime.domain.RunStatus
+import com.agentworkspace.runtime.data.RunConfigurationCodec
+import com.agentworkspace.readiness.domain.WorkspaceCapability
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
@@ -24,6 +26,11 @@ data class PendingApproval(
     val destructive: Boolean,
 )
 
+data class CompletionEvidence(
+    val verificationLabel: String,
+    val limitations: List<String>,
+)
+
 object RuntimePresenter {
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -34,8 +41,17 @@ object RuntimePresenter {
     ): List<ChatLine> {
         if (task == null || run == null) return emptyList()
         val lines = buildList {
-            events.sortedBy { it.sequence }
-                .mapNotNullTo(this) { eventLine(it) }
+            events.sortedBy { it.sequence }.forEach { event ->
+                eventLine(event)?.let(::add)
+                if (event.kind == RunEventKind.COMPLETED) {
+                    add(
+                        ChatLine(
+                            ChatLine.Role.SYSTEM,
+                            "Verification: ${completionEvidence(run).verificationLabel}",
+                        ),
+                    )
+                }
+            }
         }
         return lines.fold(emptyList()) { result, line ->
             val previous = result.lastOrNull()
@@ -61,6 +77,26 @@ object RuntimePresenter {
                 destructive = it.risk.equals("destructive", ignoreCase = true),
             )
         }
+
+    fun completionEvidence(run: AgentRunEntity): CompletionEvidence {
+        val configuration = runCatching {
+            RunConfigurationCodec.decode(run.configurationJson)
+        }.getOrNull() ?: return CompletionEvidence(
+            verificationLabel = "Verification unavailable",
+            limitations = emptyList(),
+        )
+        val label = when {
+            WorkspaceCapability.REMOTE_VERIFICATION in configuration.capabilities ->
+                "Verified remotely"
+            "COMMAND_EXECUTION_UNAVAILABLE" in configuration.limitations ->
+                "Not command-verified"
+            else -> "Verification unavailable"
+        }
+        return CompletionEvidence(
+            verificationLabel = label,
+            limitations = configuration.limitations,
+        )
+    }
 
     private fun eventLine(event: RunEventEntity): ChatLine? {
         val payload = event.payload()
