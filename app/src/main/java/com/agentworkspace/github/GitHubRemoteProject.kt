@@ -11,8 +11,12 @@ data class GitHubRemoteProject(
 }
 
 fun isGitHubProjectPath(path: String): Boolean =
-    path.substringBefore(':', missingDelimiterValue = "")
-        .equals("github", ignoreCase = true)
+    path.startsWith("github://") &&
+        '#' !in path &&
+        path.removePrefix("github://")
+            .substringBefore('?')
+            .split('/')
+            .let { segments -> segments.size == 2 && segments.all(String::isNotBlank) }
 
 fun githubProjectPath(owner: String, name: String, branch: String): String =
     Uri.Builder()

@@ -19,9 +19,10 @@ import org.junit.Test
 class RuntimeReadinessCoordinatorTest {
     @Test
     fun `missing project is the first blocker`() {
-        assertEquals(
-            ReadinessAction.CREATE_PROJECT,
-            coordinator().evaluate(null, emptyList()).blocker().action,
+        assertBlocked(
+            readiness = coordinator().evaluate(null, emptyList()),
+            code = "PROJECT_REQUIRED",
+            action = ReadinessAction.CREATE_PROJECT,
         )
     }
 
@@ -32,14 +33,34 @@ class RuntimeReadinessCoordinatorTest {
             emptyList(),
         )
 
-        assertEquals(ReadinessAction.SELECT_MODEL, result.blocker().action)
+        assertBlocked(result, "MODEL_REQUIRED", ReadinessAction.SELECT_MODEL)
     }
 
     @Test
     fun `missing connection blocks after a preferred model is selected`() {
         val result = coordinator().evaluate(project(), emptyList())
 
-        assertEquals(ReadinessAction.OPEN_CONNECTIONS, result.blocker().action)
+        assertBlocked(result, "CONNECTION_REQUIRED", ReadinessAction.OPEN_CONNECTIONS)
+    }
+
+    @Test
+    fun `missing preferred connection does not fall back by model`() {
+        val result = coordinator().evaluate(
+            project(preferredConnectionId = null),
+            listOf(connection()),
+        )
+
+        assertBlocked(result, "CONNECTION_REQUIRED", ReadinessAction.OPEN_CONNECTIONS)
+    }
+
+    @Test
+    fun `blank preferred connection does not fall back by model`() {
+        val result = coordinator().evaluate(
+            project(preferredConnectionId = " "),
+            listOf(connection()),
+        )
+
+        assertBlocked(result, "CONNECTION_REQUIRED", ReadinessAction.OPEN_CONNECTIONS)
     }
 
     @Test
@@ -49,7 +70,7 @@ class RuntimeReadinessCoordinatorTest {
             listOf(connection(authState = AuthState.EXPIRED)),
         )
 
-        assertEquals(ReadinessAction.REAUTHENTICATE, result.blocker().action)
+        assertBlocked(result, "AUTHENTICATION_REQUIRED", ReadinessAction.REAUTHENTICATE)
     }
 
     @Test
@@ -64,7 +85,27 @@ class RuntimeReadinessCoordinatorTest {
             ),
         )
 
-        assertEquals(ReadinessAction.OPEN_CONNECTIONS, result.blocker().action)
+        assertBlocked(result, "RUNTIME_ADAPTER_UNAVAILABLE", ReadinessAction.OPEN_CONNECTIONS)
+    }
+
+    @Test
+    fun `missing preset has no explicit direct runtime adapter`() {
+        val result = coordinator().evaluate(
+            project(),
+            listOf(connection(presetId = null)),
+        )
+
+        assertBlocked(result, "RUNTIME_ADAPTER_UNAVAILABLE", ReadinessAction.OPEN_CONNECTIONS)
+    }
+
+    @Test
+    fun `unknown preset has no explicit direct runtime adapter`() {
+        val result = coordinator().evaluate(
+            project(),
+            listOf(connection(presetId = "unknown-preset")),
+        )
+
+        assertBlocked(result, "RUNTIME_ADAPTER_UNAVAILABLE", ReadinessAction.OPEN_CONNECTIONS)
     }
 
     @Test
@@ -74,14 +115,14 @@ class RuntimeReadinessCoordinatorTest {
             listOf(connection(availabilityState = AvailabilityState.UNAVAILABLE)),
         )
 
-        assertEquals(ReadinessAction.SELECT_MODEL, result.blocker().action)
+        assertBlocked(result, "MODEL_UNAVAILABLE", ReadinessAction.SELECT_MODEL)
     }
 
     @Test
     fun `missing workspace access is the final blocker`() {
         val result = coordinator(canAccess = false).evaluate(project(), listOf(connection()))
 
-        assertEquals(ReadinessAction.RECONNECT_WORKSPACE, result.blocker().action)
+        assertBlocked(result, "WORKSPACE_ACCESS_REQUIRED", ReadinessAction.RECONNECT_WORKSPACE)
     }
 
     @Test
@@ -171,6 +212,16 @@ class RuntimeReadinessCoordinatorTest {
     )
 
     private fun RuntimeReadiness.blocker() = (this as RuntimeReadiness.Blocked).blocker
+
+    private fun assertBlocked(
+        readiness: RuntimeReadiness,
+        code: String,
+        action: ReadinessAction,
+    ) {
+        val blocker = readiness.blocker()
+        assertEquals(code, blocker.code)
+        assertEquals(action, blocker.action)
+    }
 
     private companion object {
         const val CONNECTION_ID = "connection"

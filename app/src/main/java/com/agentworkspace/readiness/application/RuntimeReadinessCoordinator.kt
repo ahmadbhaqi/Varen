@@ -4,6 +4,7 @@ import com.agentworkspace.data.model.AuthState
 import com.agentworkspace.data.model.AvailabilityState
 import com.agentworkspace.data.model.Connection
 import com.agentworkspace.data.model.Project
+import com.agentworkspace.github.isGitHubProjectPath
 import com.agentworkspace.readiness.domain.ReadinessAction
 import com.agentworkspace.readiness.domain.ReadinessBlocker
 import com.agentworkspace.readiness.domain.RuntimeLimitation
@@ -17,7 +18,7 @@ import javax.inject.Singleton
 
 class WorkspaceCapabilityResolver @Inject constructor() {
     fun resolve(project: Project): WorkspaceCapabilityProfile = when {
-        project.path.startsWith("github://", ignoreCase = true) -> WorkspaceCapabilityProfile(
+        isGitHubProjectPath(project.path) -> WorkspaceCapabilityProfile(
             kind = WorkspaceKind.GITHUB,
             capabilities = GITHUB_CAPABILITIES,
         )
@@ -63,7 +64,7 @@ class RuntimeReadinessCoordinator @Inject constructor(
                 message = "Select a model for this project.",
                 action = ReadinessAction.SELECT_MODEL,
             )
-        val connection = selectedConnection(selectedProject, preferredModelId, connections)
+        val connection = selectedConnection(selectedProject, connections)
             ?: return blocked(
                 code = "CONNECTION_REQUIRED",
                 message = "Choose an enabled connection for this project.",
@@ -76,7 +77,7 @@ class RuntimeReadinessCoordinator @Inject constructor(
                 action = ReadinessAction.REAUTHENTICATE,
             )
         }
-        if (connection.preset?.supportsDirectRuntime == false) {
+        if (connection.preset?.supportsDirectRuntime != true) {
             return blocked(
                 code = "RUNTIME_ADAPTER_UNAVAILABLE",
                 message = "The selected connection has no direct Android runtime adapter.",
@@ -115,17 +116,11 @@ class RuntimeReadinessCoordinator @Inject constructor(
 
     private fun selectedConnection(
         project: Project,
-        preferredModelId: String,
         connections: List<Connection>,
     ): Connection? {
         val preferredConnectionId = project.preferredConnectionId?.takeIf { it.isNotBlank() }
-        return if (preferredConnectionId != null) {
-            connections.firstOrNull { it.id == preferredConnectionId && it.isEnabled }
-        } else {
-            connections.firstOrNull { connection ->
-                connection.isEnabled && connection.models.any { it.id == preferredModelId }
-            }
-        }
+            ?: return null
+        return connections.firstOrNull { it.id == preferredConnectionId && it.isEnabled }
     }
 
     private fun blocked(

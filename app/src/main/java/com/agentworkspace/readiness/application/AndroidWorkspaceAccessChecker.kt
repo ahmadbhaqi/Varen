@@ -9,6 +9,19 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+internal data class PersistedWorkspacePermission(
+    val uri: String,
+    val canRead: Boolean,
+    val canWrite: Boolean,
+)
+
+internal fun hasPersistedWorkspaceAccess(
+    workspaceUri: String,
+    permissions: Iterable<PersistedWorkspacePermission>,
+): Boolean = permissions.any { permission ->
+    permission.uri == workspaceUri && permission.canRead && permission.canWrite
+}
+
 @Singleton
 class AndroidWorkspaceAccessChecker @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -19,8 +32,13 @@ class AndroidWorkspaceAccessChecker @Inject constructor(
         val uri = runCatching { Uri.parse(project.path) }.getOrNull()
             ?.takeIf { it.scheme.equals("content", ignoreCase = true) }
             ?: return false
-        return context.contentResolver.persistedUriPermissions.any { grant ->
-            grant.uri == uri && grant.isReadPermission && grant.isWritePermission
+        val permissions = context.contentResolver.persistedUriPermissions.map { grant ->
+            PersistedWorkspacePermission(
+                uri = grant.uri.toString(),
+                canRead = grant.isReadPermission,
+                canWrite = grant.isWritePermission,
+            )
         }
+        return hasPersistedWorkspaceAccess(uri.toString(), permissions)
     }
 }
