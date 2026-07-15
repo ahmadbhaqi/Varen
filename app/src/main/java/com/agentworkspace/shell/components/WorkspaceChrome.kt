@@ -4,11 +4,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateDp
 import androidx.compose.animation.core.updateTransition
@@ -884,7 +879,6 @@ fun WorkspaceDrawerContent(
         "Connections",
         "usage",
         "History",
-        "Checkpoints",
         "Settings",
     )
     val orderedDestinations = allowedDrawerRoutes.mapNotNull { route ->
@@ -1144,7 +1138,6 @@ private fun drawerDestinationTitle(route: String): String = when (route) {
     "Connections" -> "Connections"
     "usage" -> "Usage"
     "History" -> "History"
-    "Checkpoints" -> "Checkpoints"
     "Settings" -> "Settings"
     else -> route
 }
@@ -1389,7 +1382,6 @@ private fun drawerIcon(iconKey: String): ImageVector = when (iconKey) {
     "connections" -> Icons.Filled.Hub
     "usage" -> Icons.Filled.Analytics
     "history" -> Icons.Filled.History
-    "checkpoints" -> Icons.Filled.Restore
     "mcp" -> Icons.Filled.Palette
     else -> Icons.Filled.Settings
 }

@@ -280,6 +280,26 @@ class WorkspaceFormattersTest {
     }
 
     @Test
+    fun checkpointChatSpecUsesRestoreLanguage() {
+        val spec = checkpointChatCardSpec(
+            Checkpoint(
+                projectId = "project",
+                reason = "Before editing navigation",
+                scope = CheckpointScope.MULTI_FILE,
+                files = listOf(
+                    CheckpointFile("NavGraph.kt", "before", "hash-1"),
+                    CheckpointFile("Drawer.kt", "before", "hash-2"),
+                ),
+            ),
+        )
+
+        assertEquals("Restore point", spec.title)
+        assertEquals("Before editing navigation", spec.body)
+        assertEquals("2 files", spec.meta)
+        assertEquals("Restore", spec.actionLabel)
+    }
+
+    @Test
     fun workspaceContextSummaryUsesOnlyProjectModelTrustAndConnection() {
         assertEquals(
             WorkspaceContextSummary(
@@ -629,13 +649,14 @@ class WorkspaceFormattersTest {
     @Test
     fun drawerDestinationsContainOnlyGlobalEntryPoints() {
         assertEquals(
-            listOf("Projects", "Models", "UI Studio", "Connections", "Usage", "History", "Checkpoints", "Settings"),
+            listOf("Projects", "Models", "UI Studio", "Connections", "Usage", "History", "Settings"),
             workspaceDrawerDestinations().map { it.title },
         )
         assertEquals(
-            listOf("Projects", "model_catalog", "Mcp", "Connections", "usage", "History", "Checkpoints", "Settings"),
+            listOf("Projects", "model_catalog", "Mcp", "Connections", "usage", "History", "Settings"),
             workspaceDrawerDestinations().map { it.route },
         )
+        assertFalse(workspaceDrawerDestinations().any { it.route == "Checkpoints" })
     }
 
     @Test

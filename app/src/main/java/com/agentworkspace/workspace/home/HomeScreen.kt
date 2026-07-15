@@ -1,7 +1,6 @@
 package com.agentworkspace.workspace.home
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -255,8 +254,7 @@ private fun ConversationTimeline(
             modifier = Modifier
                 .widthIn(max = 760.dp)
                 .fillMaxSize()
-                .align(Alignment.TopCenter)
-                .animateContentSize(),
+                .align(Alignment.TopCenter),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {

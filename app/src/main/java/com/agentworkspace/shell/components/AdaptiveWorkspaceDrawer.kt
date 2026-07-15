@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -65,7 +64,6 @@ fun AdaptiveWorkspaceDrawer(
         "Connections",
         "usage",
         "History",
-        "Checkpoints",
         "Settings",
     )
     val visibleDestinations = visibleRoutes.mapNotNull { route ->
@@ -194,7 +192,6 @@ private fun adaptiveDrawerIcon(iconKey: String): ImageVector = when (iconKey) {
     "connections" -> Icons.Filled.Hub
     "usage" -> Icons.Filled.Analytics
     "history" -> Icons.Filled.History
-    "checkpoints" -> Icons.Filled.Restore
     "settings" -> Icons.Filled.Settings
     else -> Icons.Filled.AutoAwesome
 }

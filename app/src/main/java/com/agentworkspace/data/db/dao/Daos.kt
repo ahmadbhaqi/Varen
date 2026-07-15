@@ -4,6 +4,8 @@ import androidx.room.*
 import com.agentworkspace.data.db.entity.*
 import kotlinx.coroutines.flow.Flow
 
+const val MAX_TASK_CHECKPOINTS = 20
+
 @Dao
 interface UsageDao {
     @Query("SELECT * FROM usage_records ORDER BY timestamp DESC")
@@ -77,8 +79,11 @@ interface CheckpointDao {
     @Query("SELECT * FROM checkpoints WHERE projectId = :projectId ORDER BY createdAt DESC")
     fun getCheckpointsForProject(projectId: String): Flow<List<CheckpointEntity>>
 
-    @Query("SELECT * FROM checkpoints WHERE taskId = :taskId ORDER BY createdAt DESC")
-    fun getCheckpointsForTask(taskId: String): Flow<List<CheckpointEntity>>
+    @Query("SELECT * FROM checkpoints WHERE taskId = :taskId ORDER BY createdAt DESC LIMIT :limit")
+    fun getCheckpointsForTask(
+        taskId: String,
+        limit: Int = MAX_TASK_CHECKPOINTS,
+    ): Flow<List<CheckpointEntity>>
 
     @Query("SELECT * FROM checkpoints WHERE id = :id")
     suspend fun getCheckpointById(id: String): CheckpointEntity?

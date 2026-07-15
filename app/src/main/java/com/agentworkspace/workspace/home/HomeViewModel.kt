@@ -18,6 +18,7 @@ import com.agentworkspace.shell.presentation.homeConversationTasks
 import com.agentworkspace.shell.presentation.HomeModelOption
 import com.agentworkspace.shell.presentation.homeModelOptions
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -35,6 +36,7 @@ data class HomeUiState(
     val isLoading: Boolean = true,
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val projectRepository: ProjectRepository,
@@ -73,6 +75,20 @@ class HomeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
+    private val conversationTasks = combine(
+        taskRepository.getActiveTasks(),
+        taskRepository.getLatestTerminalTask(),
+    ) { activeTasks, latestTerminalTask ->
+        homeConversationTasks(activeTasks, latestTerminalTask)
+    }.distinctUntilChanged()
+
+    private val activeTaskProject = conversationTasks
+        .map { tasks -> tasks.firstOrNull()?.projectId }
+        .distinctUntilChanged()
+        .flatMapLatest { projectId ->
+            projectId?.let(projectRepository::getProjectById) ?: flowOf(null)
+        }
+
     init {
         // Combine all live signals so the cockpit never shows stale defaults.
         // The home screen is the workspace instrument cluster: connection
@@ -80,24 +96,19 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             combine(
                 projectRepository.getRecentProjects(10),
-                taskRepository.getActiveTasks(),
-                taskRepository.getLatestTerminalTask(),
+                conversationTasks,
+                activeTaskProject,
                 connectionRepository.getAllConnections(),
                 usageRepository.getTotalUsage(),
-            ) { projects, activeTasks, latestTerminalTask, connections, usage ->
-                val tasks = homeConversationTasks(activeTasks, latestTerminalTask)
-                val activeTaskProject = tasks
-                    .firstOrNull()
-                    ?.projectId
-                    ?.let { projectId -> projectRepository.getProjectById(projectId).first() }
+            ) { projects, tasks, taskProject, connections, usage ->
                 val displayProject = homeActiveProject(
                     activeTask = tasks.firstOrNull(),
                     recentProjects = projects,
-                    activeTaskProject = activeTaskProject,
+                    activeTaskProject = taskProject,
                 )
                 val projectPreferredModelName = displayProject
                     ?.preferredModelId
-                    ?.let { modelId -> connectionRepository.getModelById(modelId)?.name }
+                    ?.let { modelId -> connections.flatMap { it.models }.firstOrNull { it.id == modelId }?.name }
 
                 val enabled = connections.filter { it.isEnabled }
                 val authenticated = enabled.filter { it.authState == AuthState.AUTHENTICATED }
@@ -128,7 +139,7 @@ class HomeViewModel @Inject constructor(
 
                 val trustMode = homeContextTrustMode(
                     activeTask = tasks.firstOrNull(),
-                    activeTaskProject = activeTaskProject,
+                    activeTaskProject = taskProject,
                     recentProjects = projects,
                 )
                 val activeModelName = homeContextModelName(
@@ -142,7 +153,7 @@ class HomeViewModel @Inject constructor(
                 HomeUiState(
                     recentProjects = projects,
                     activeTasks = tasks,
-                    activeTaskProject = activeTaskProject,
+                    activeTaskProject = taskProject,
                     activeModelName = activeModelName,
                     connectionStatus = connectionStatus,
                     trustMode = trustMode,

@@ -1,12 +1,5 @@
 package com.agentworkspace.shell.components
 
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -30,12 +23,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
@@ -360,24 +350,9 @@ fun StatusPill(
 
 @Composable
 fun PulsingDot(color: Color, size: Dp = 8.dp, modifier: Modifier = Modifier) {
-    val transition = rememberInfiniteTransition(label = "pulse")
-    val scale by transition.animateFloat(
-        0.90f,
-        1.12f,
-        infiniteRepeatable(tween(1200, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        "pulseScale",
-    )
-    val alpha by transition.animateFloat(
-        1f,
-        0.4f,
-        infiniteRepeatable(tween(1200, easing = LinearEasing), RepeatMode.Reverse),
-        "pulseAlpha",
-    )
     Box(
         modifier = modifier
             .size(size)
-            .scale(scale)
-            .alpha(alpha)
             .clip(CircleShape)
             .background(color),
     )
@@ -385,17 +360,10 @@ fun PulsingDot(color: Color, size: Dp = 8.dp, modifier: Modifier = Modifier) {
 
 @Composable
 fun ShimmerBox(modifier: Modifier = Modifier, cornerRadius: Dp = 8.dp) {
-    val transition = rememberInfiniteTransition(label = "shimmer")
-    val alpha by transition.animateFloat(
-        0.45f,
-        0.78f,
-        infiniteRepeatable(tween(1200, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        "loadingAlpha",
-    )
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(cornerRadius))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = alpha)),
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.62f)),
     )
 }
 

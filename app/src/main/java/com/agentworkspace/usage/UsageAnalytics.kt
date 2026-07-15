@@ -12,7 +12,7 @@ enum class UsagePeriod(val label: String) {
     Today("Today"),
     Last7Days("7D"),
     Last30Days("30D"),
-    All("All"),
+    All("Recent"),
 }
 
 data class UsageTrendPoint(

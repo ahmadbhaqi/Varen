@@ -35,8 +35,6 @@ fun AgentWorkspaceScaffold() {
     val navController = rememberNavController()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
-    val homeViewModel: HomeViewModel = hiltViewModel()
-    val homeState by homeViewModel.uiState.collectAsStateWithLifecycle()
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
     var projectMenuExpanded by remember { mutableStateOf(false) }
     var menuHasProject by remember { mutableStateOf(false) }
@@ -56,14 +54,9 @@ fun AgentWorkspaceScaffold() {
                 drawerContainerColor = MaterialTheme.colorScheme.background,
                 drawerContentColor = AppTheme.colors.textPrimary,
             ) {
-                AdaptiveWorkspaceDrawer(
+                WorkspaceDrawerStateContent(
                     destinations = drawerDestinations,
-                    recentProjects = homeState.recentProjects,
-                    activeProjectId = homeState.activeTaskProject?.id,
                     currentRoute = currentRoute,
-                    connectionStatus = homeState.connectionStatus,
-                    activeModelName = homeState.activeModelName,
-                    sessionTokens = homeState.sessionTokens,
                     onHomeClick = {
                         closeDrawer()
                         navController.navigate("Home") {
@@ -117,4 +110,29 @@ fun AgentWorkspaceScaffold() {
             }
         }
     }
+}
+
+@Composable
+private fun WorkspaceDrawerStateContent(
+    destinations: List<com.agentworkspace.shell.presentation.NavigationDestinationSpec>,
+    currentRoute: String?,
+    onHomeClick: () -> Unit,
+    onProjectClick: (String) -> Unit,
+    onDestinationClick: (com.agentworkspace.shell.presentation.NavigationDestinationSpec) -> Unit,
+    viewModel: HomeViewModel = hiltViewModel(),
+) {
+    val homeState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    AdaptiveWorkspaceDrawer(
+        destinations = destinations,
+        recentProjects = homeState.recentProjects,
+        activeProjectId = homeState.activeTaskProject?.id,
+        currentRoute = currentRoute,
+        connectionStatus = homeState.connectionStatus,
+        activeModelName = homeState.activeModelName,
+        sessionTokens = homeState.sessionTokens,
+        onHomeClick = onHomeClick,
+        onProjectClick = onProjectClick,
+        onDestinationClick = onDestinationClick,
+    )
 }

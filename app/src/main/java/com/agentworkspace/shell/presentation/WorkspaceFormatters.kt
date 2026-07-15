@@ -55,6 +55,13 @@ data class CheckpointTotals(
     val manual: Int,
 )
 
+data class CheckpointChatCardSpec(
+    val title: String,
+    val body: String,
+    val meta: String,
+    val actionLabel: String,
+)
+
 data class AgentRunPresentation(
     val label: String,
     val headline: String,
@@ -470,7 +477,6 @@ fun workspaceDrawerDestinations(): List<NavigationDestinationSpec> = listOf(
     NavigationDestinationSpec(route = "Connections", title = "Connections", iconKey = "connections"),
     NavigationDestinationSpec(route = "usage", title = "Usage", iconKey = "usage"),
     NavigationDestinationSpec(route = "History", title = "History", iconKey = "history"),
-    NavigationDestinationSpec(route = "Checkpoints", title = "Checkpoints", iconKey = "checkpoints"),
     NavigationDestinationSpec(route = "Settings", title = "Settings", iconKey = "settings"),
 )
 
@@ -642,6 +648,14 @@ fun checkpointTotals(checkpoints: List<Checkpoint>): CheckpointTotals {
         manual = manual,
     )
 }
+
+fun checkpointChatCardSpec(checkpoint: Checkpoint): CheckpointChatCardSpec =
+    CheckpointChatCardSpec(
+        title = "Restore point",
+        body = checkpoint.reason.ifBlank { "Before agent changes" },
+        meta = "${checkpoint.files.size} ${if (checkpoint.files.size == 1) "file" else "files"}",
+        actionLabel = "Restore",
+    )
 
 fun formatCheckpointSizeBytes(bytes: Int): String = when {
     bytes <= 0 -> "0 KB"

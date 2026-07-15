@@ -28,7 +28,6 @@ import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Science
@@ -36,7 +35,6 @@ import androidx.compose.material.icons.filled.SystemUpdateAlt
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -58,7 +56,6 @@ import com.agentworkspace.data.model.HistoryType
 import com.agentworkspace.shell.components.WorkspaceIconButton
 import com.agentworkspace.shell.components.WorkspaceScreenBackground
 import com.agentworkspace.shell.components.modern.GlassCard
-import com.agentworkspace.shell.components.modern.StatusBadge
 import com.agentworkspace.shell.components.bounceClick
 import com.agentworkspace.shell.presentation.historyFilterLabels
 import com.agentworkspace.shell.theme.AiTheme
@@ -125,28 +122,20 @@ fun HistoryScreen(
                             modifier = Modifier.padding(start = 4.dp, top = 6.dp)
                         )
                     }
-                    item {
-                        GlassCard(accentColor = AiTheme.colors.aiPrimary) {
-                            Column {
-                                entries.forEachIndexed { index, entry ->
-                                    HistoryTimelineRow(
-                                        entry = entry,
-                                        onClick = if (entry.projectId != null && entry.taskId != null) {
-                                            { onHistoryItemClick(entry) }
-                                        } else {
-                                            null
-                                        },
-                                    )
-                                    if (index != entries.lastIndex) {
-                                        Box(
-                                            Modifier
-                                                .fillMaxWidth()
-                                                .height(1.dp)
-                                                .background(AiTheme.colors.surfaceBorder.copy(alpha = 0.46f)),
-                                        )
-                                    }
-                                }
-                            }
+                    items(
+                        items = entries,
+                        key = { entry -> entry.id },
+                        contentType = { "history-entry" },
+                    ) { entry ->
+                        GlassCard(accentColor = historyAccent(entry)) {
+                            HistoryTimelineRow(
+                                entry = entry,
+                                onClick = if (entry.projectId != null && entry.taskId != null) {
+                                    { onHistoryItemClick(entry) }
+                                } else {
+                                    null
+                                },
+                            )
                         }
                     }
                 }

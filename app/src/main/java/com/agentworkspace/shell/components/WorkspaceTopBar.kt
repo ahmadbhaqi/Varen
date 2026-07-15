@@ -40,7 +40,6 @@ fun WorkspaceTopBar(
         "Projects" -> "Projects"
         "model_catalog" -> "Models"
         "Mcp" -> "UI Studio"
-        "Checkpoints" -> "Checkpoints"
         else -> "Workspace"
     }
 

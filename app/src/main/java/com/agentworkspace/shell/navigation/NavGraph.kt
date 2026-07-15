@@ -65,21 +65,6 @@ fun NavGraph(
             )
         }
 
-        composable("Checkpoints") {
-            com.agentworkspace.checkpoint.CheckpointsScreen(
-                onBack = { navController.popBackStack() },
-                onCheckpointClick = { checkpointId ->
-                    navController.navigate("checkpoint/$checkpointId")
-                },
-            )
-        }
-
-        composable("checkpoint/{checkpointId}") {
-            com.agentworkspace.checkpoint.CheckpointDetailScreen(
-                onBack = { navController.popBackStack() },
-            )
-        }
-
         composable("usage") {
             com.agentworkspace.usage.UsageScreen(onOpenDrawer = onOpenDrawer)
         }
